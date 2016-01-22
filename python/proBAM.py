@@ -54,6 +54,8 @@ def get_input_variables():
     global decoy_annotation
     global version
     global sorting_order
+    global map_decoy
+    global rm_duplicates
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
@@ -70,6 +72,8 @@ def get_input_variables():
     version='1.0'
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
+    map_decoy=""
+    rm_duplicates=""
 
     #
     # Read command line args
@@ -77,7 +81,7 @@ def get_input_variables():
     #
 
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:d",["name=","mismatches=","version=","database=","species=","file=","directory="])
+        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a",["name=","mismatches=","version=","database=","species=","file=","directory=","rm_duplicates=","map_decoy="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit()
@@ -104,8 +108,12 @@ def get_input_variables():
             species=a
         if o in ('-f','--file'):
             psm_file=a
-        if o in ('-d','--directory'):
+        if o in ('-c','--directory'):
             directory=a
+        if o in ('-r','--rm_duplicates'):
+            rm_duplicates=a
+        if o in ('-a','--map_decoy'):
+            map_decoy=a
 
     #
     # Check for correct argument, output argument and parse
@@ -135,6 +143,10 @@ def get_input_variables():
        os.chdir(directory)
     if(directory !=''):
         os.chdir(directory)
+    if rm_duplicates!="Y":
+        rm_duplicats="N"
+    if map_decoy!="Y":
+        map_decoy="N"
 
     allowed_mismatches=mismatches
     database_v=version
@@ -161,7 +173,7 @@ species="homo_sapiens"
 database='ENSEMBL'
 database_v=82
 # TODO Let users specify used the decoy annotation
-decoy_annotation=['REV_','DECOY_']
+decoy_annotation=['REV_','DECOY_','_REVERSED']
 allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
@@ -195,7 +207,7 @@ def open_sam_file(directory,name):
 #
 # Convert PSM to SAM
 #
-def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file):
+def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates):
     '''
     :param psm_hash: dictionairy of psm files
     :param transcript_hash: dictionairy of transcripts
@@ -214,6 +226,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
             nohit_PSM_to_SAM(psm)
         else:
             for row in psm['search_hit']:
+                if rm_duplicates=="Y":
+                    dup={}
                 for p in range(0,len(row['proteins'])):
                     decoy=0
                     # convert decoys with decoy-specific convertor
@@ -222,7 +236,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                             decoy=1
                             key=row['proteins'][p]['protein'].upper().split(d)[1]
                             if key in transcript_hash.keys():
-                                decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,file)
+                                decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,file,
+                                                 map_decoy,rm_duplicates)
                             else:
                                 unannotated_PSM_to_SAM(psm,row,decoy,file)
 
@@ -309,8 +324,15 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     temp_result[21]="XT:i:NA"
                                     #XG: Petide type
                                     temp_result[22]=create_XG(phit[1])
-
-                                    write_psm(temp_result,file)
+                                    # remove duplicates if rm_duplicates=Y
+                                    if rm_duplicates=="Y":
+                                        dup_key= str(temp_result[9])+"_"+str(transcript_hash[key]['chr'])+"_"+\
+                                                    str(transcript_hash[key]['strand'])+"_"+str(temp_result[3])
+                                        if dup_key not in dup.keys():
+                                            dup[dup_key]=1
+                                            write_psm(temp_result,file)
+                                    else:
+                                        write_psm(temp_result,file)
     file.close()
 
 
@@ -688,7 +710,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,file):
 # Function to convert decoy PSM to SAM format
 #
 
-def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,file):
+def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,file,map_decoy):
     '''
     :param psm: psm dictionairy
     :param row: row where decoy found
@@ -700,7 +722,11 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,fi
     :return: SAM of decoy PSM
     '''
     temp_result=[None]*23
-    protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[key]['protein_seq'],allowed_mismatches)
+    #map decoy to genome if map_decoy=Y
+    if map_decoy=="Y":
+        protein_hit=map_peptide_to_protein(row['peptide'][::-1],transcript_hash[key]['protein_seq'],allowed_mismatches)
+    else:
+        protein_hit=[]
     if len(protein_hit)==0:
         unannotated_PSM_to_SAM(psm,row,1,file)
     else:
@@ -867,7 +893,7 @@ if __name__=='__main__':
 
     # convert to SAM
     create_SAM_header(file,version,database,sorting_order,database_v,species)
-    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file)
+    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy)
     sam_2_bam(directory,name)
 
 

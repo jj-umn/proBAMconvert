@@ -71,7 +71,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v):
                         hit=0
                         for d in decoy_annotation:
                             if d in psm['proteins'][i]['protein'].upper():
-                                ID=psm['proteins'][i]['protein'].upper().split(d)[1]
+                                ID=psm['proteins'][i]['protein'].upper().strip(d)
                                 protein_ID.append(ID)
                                 hit=1
                         if hit==0:
@@ -172,7 +172,7 @@ def get_protein_ID(psm_hash,decoy_annotation):
                     hit=0
                     for d in decoy_annotation:
                         if d in psm['proteins'][i]['protein'].upper():
-                            ID=psm['proteins'][i]['protein'].upper().split(d)[1]
+                            ID=psm['proteins'][i]['protein'].upper().strip(d)
                             protein_ID.append(ID)
                             hit=1
                     if hit==0:
