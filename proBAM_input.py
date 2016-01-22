@@ -3,10 +3,11 @@ import proBAM_mzTab
 from pyteomics import pepxml
 import re
 
+
 #
 # Import PSM file and parse into dictionairy
 #
-def get_PSM_hash(psm_file):
+def get_PSM_hash(psm_file,decoy_annotation):
     '''
     :param psm_file: psm file (pepxml,mzid or mztab)
     :raise: IO error: unrecognized file format
@@ -25,11 +26,6 @@ def get_PSM_hash(psm_file):
         # count = 0
         # parse tags out of protein IDs
         for row in PEP:
-            if 'search_hit' in row.keys():
-                for psm in row['search_hit']:
-                    for i in range (0,len(psm['proteins'])):
-                        if '|' in psm['proteins'][i]['protein']:
-                            psm['proteins'][i]['protein']=psm['proteins'][i]['protein'].split('|')[1]
             #print row
             #if count==5500:
             #    break

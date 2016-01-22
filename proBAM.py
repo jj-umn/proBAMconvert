@@ -7,13 +7,19 @@ from itertools import imap
 import operator
 import re
 import pysam
-import pysam.TabProxies
+import pysam.ctabixproxies
 import proBAM_biomart
 import proBAM_input
 import proBAM_ENSEMBL
 import sys
 import getopt
 import os
+import proBAM_IDparser
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 ######################################
 ###         DEPENDENCIES           ###
@@ -181,84 +187,13 @@ def open_sam_file(directory,name):
     file=open(directory+name+'.sam',"w")
     return file
 
-#
-# Retrieve matched protein IDs
-#
-def get_protein_ID(psm_hash,decoy_annotation):
-    '''
-    :param psm_hash: dictionairy containing PSM file
-    :param decoy_annotation: list of decoy annotation tags
-    :return: list of unique protein IDs
-    '''
-
-    #retrieve protein IDs from PSM FILE
-    protein_ID=[]
-    for key in psm_hash:
-        if 'search_hit' in key.keys():
-            for psm in key['search_hit']:
-                for i in range (0,len(psm['proteins'])):
-                    hit=0
-                    for d in decoy_annotation:
-                        if d in psm['proteins'][i]['protein'].upper():
-                            ID=psm['proteins'][i]['protein'].upper().split(d)[1]
-                            protein_ID.append(ID)
-                            hit=1
-                    if hit==0:
-                        protein_ID.append(psm['proteins'][i]['protein'])
-    #retain only unique IDs
-    unique=set(protein_ID)
-    #print unique
-    return list(unique)
 
 ######################
 ### MAIN FUNCTIONS ###
 ######################
 
 #
-# Parse Protein_ID in the right identifiers
-#
-
-def parse_Protein_ID(psm_hash,species,database,decoy_annotation,database_v):
-    '''
-    :param psm_hash: psm file dictionairy
-    :param species: species name
-    :param database: target database name
-    :param decoy_annotation: list of decoy annotations
-    :param database_v: database version
-    :raise: unsupported annotation datbase error
-    :raise: Protein IDs not recognized
-    :return:
-    '''
-    print('Commencing protein ID identification and retrieval')
-
-    psm_protein_id=get_protein_ID(psm_hash,decoy_annotation)
-    ensembl_prefix=proBAM_ENSEMBL.get_Ensembl_prefix(species)
-    not_null=0
-    while psm_protein_id[not_null]=="":
-        not_null+=1
-    if database=="ENSEMBL":
-        if ensembl_prefix[0][0] in psm_protein_id[not_null]:
-            return proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'transcript',database_v,species)
-        elif ensembl_prefix[0][1] in psm_protein_id[not_null]:
-            return proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'protein',database_v,species)
-        elif re.match("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}",psm_protein_id[not_null]) is not None:
-            conversion=id_map('UNIPROT/SWISSPROT','ENSEMBL',psm_protein_id,psm_hash,species,decoy_annotation,database_v)
-            psm_protein_id=conversion[0]
-            psm_hash=conversion[1]
-            return proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'transcript',database_v,species)
-        else:
-            raise ValueError('Protein ID annotations not recognized\n'\
-            'currently supported Protein ID annotations:\n'\
-            'ENSEMBL protein identifiers\n ENSEMBL transcript identifiers\n UNIPROT/SWISSPROT identifiers ')
-
-    else:
-        raise ValueError('Currently supported annotation databases: \n ENSEMBL')
-
-
-#
 # Convert PSM to SAM
-#
-#
 #
 def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file):
     '''
@@ -336,8 +271,12 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #TLEN
                                     temp_result[8]=0
                                     #SEQ
-                                    temp_result[9]=str(transcript_hash[key]['transcript_seq']\
+                                    if int(transcript_hash[key]['strand'])==1:
+                                        temp_result[9]=str(transcript_hash[key]['transcript_seq']\
                                                    [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))])
+                                    else:
+                                        temp_result[9]=_reverse_complement_(str(transcript_hash[key]['transcript_seq']\
+                                                   [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))]))
                                     #QUAL
                                     temp_result[10]='*'
                                     #
@@ -799,8 +738,12 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,fi
             #TLEN
             temp_result[8]=0
             #SEQ
-            temp_result[9]=str(transcript_hash[key]['transcript_seq']\
+            if int(transcript_hash[key]['strand'])==1:
+                temp_result[9]=str(transcript_hash[key]['transcript_seq']\
                            [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))])
+            else:
+                temp_result[9]=_reverse_complement_(str(transcript_hash[key]['transcript_seq']\
+                           [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))]))
             #QUAL
             temp_result[10]='*'
             #
@@ -851,7 +794,7 @@ def hamming(str1, str2):
 #
 # Create SAM header
 #
-def create_SAM_header(file,version,database,sorting_order,database_v):
+def create_SAM_header(file,version,database,sorting_order,database_v,species):
     '''
     :param file: output file
     :param version: proBAMconvert version
@@ -863,7 +806,7 @@ def create_SAM_header(file,version,database,sorting_order,database_v):
     header=[]
     header.append('@HD\tVN:'+version+' SO:'+sorting_order)
     if database=="ENSEMBL":
-        SQ=proBAM_ENSEMBL.create_SQ_header(database_v)
+        SQ=proBAM_ENSEMBL.create_SQ_header(database_v,species)
     for row in SQ:
         header.append(row)
     header.append('@PG\tID:proBamPy\tVN:1.0')
@@ -888,65 +831,22 @@ def sam_2_bam(directory,name):
     pysam.sort((directory+name+'.bam'),(directory+name+'.sorted'))
     pysam.index(directory+name+'.sorted.bam')
 
-
 #
-# Function to map protein IDs between annotations
+# reverse complements a DNA string
 #
-def id_map(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy_annotation,database_v):
-    '''
-    :param from_annotation: supplied annotation (i.e. swissprot)
-    :param to_annotation: target annotation (i.e. ENSEMBL)
-    :param psm_protein_id: list of protein IDS
-    :param psm_hash: dictionairy of protein IDs mapped onto ENSEMBL
-    :param species: species name
-    :param decoy_annotation: list of decoy annotations
-    :param database_v: database version
-    :return: dictionairy of protein ID coversion
-    '''
-    #psm_hash.reset()
-    new_psm_protein_id=[]
-
-    print "Commencing ID conversion from "+str(from_annotation)+" to "+str(to_annotation)
-    map={}
-    if to_annotation=="ENSEMBL":
-        if from_annotation=="UNIPROT/SWISSPROT":
-            mapped_id=proBAM_biomart.id_map_ensembl("uniprot_swissprot",database_v,species,psm_protein_id)
-            for row in mapped_id:
-                row=row.split("\t")
-                if row[0]!="":
-                    if row[2] in map.keys():
-                        if map[row[2]][1]<row[1]:
-                            map[row[2]]=row
-                    else:
-                        map[row[2]]=row
-    for key in psm_hash:
-        if 'search_hit' in key.keys():
-            for psm in key['search_hit']:
-                for i in range (0,len(psm['proteins'])):
-                    hit=0
-                    for d in decoy_annotation:
-                        if d in psm['proteins'][i]['protein'].upper():
-                            ID=psm['proteins'][i]['protein'].upper().split(d)[1]
-                            if ID in map.keys():
-                                psm['proteins'][i]['protein']="DECOY_"+map[ID][0]
-                                new_psm_protein_id.append(map[ID][0])
-                            hit=1
-                    if hit==0:
-                        if psm['proteins'][i]['protein'] in map.keys():
-                            new_psm_protein_id.append(map[psm['proteins'][i]['protein']][0])
-                            psm['proteins'][i]['protein']=map[psm['proteins'][i]['protein']][0]
-
-
-    #retain only unique IDs
-    return [new_psm_protein_id,psm_hash]
-
-#
-# When an ID maps to multiple transcript IDs, fetch the longest transcript
-#
-#TODO after conformation, retrieve only the longest sequences (bp or aa ? )
-def fetch_longest_transcript(ID):
-    return ID[0]
-
+def _reverse_complement_(DNA):
+    temp=DNA[::-1]
+    DNA=""
+    for i in temp:
+        if i=="A":
+            DNA+='T'
+        elif i=="T":
+            DNA+='A'
+        elif i=="G":
+            DNA+='C'
+        else:
+            DNA+='G'
+    return DNA
 
 ####################
 ### MAIN PROGRAM ###
@@ -958,13 +858,15 @@ if __name__=='__main__':
     file=open_sam_file(directory,name)
 
     # hash PSM_DATA and define variables
-    psm_hash=proBAM_input.get_PSM_hash(psm_file)
-    annotation=parse_Protein_ID(psm_hash,species,database,decoy_annotation,database_v)
+    psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
+    parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v)
+    annotation=parse_results[1]
+    psm_hash=parse_results[0]
     transcript_hash=annotation[0]
     exon_hash=annotation[1]
 
     # convert to SAM
-    create_SAM_header(file,version,database,sorting_order,database_v)
+    create_SAM_header(file,version,database,sorting_order,database_v,species)
     PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file)
     sam_2_bam(directory,name)
 

@@ -2,7 +2,7 @@ from __future__ import division
 
 __author__ = 'Volodimir Olexiouk'
 
-from bioservices import *
+from bioservices import BioMart
 import sys
 
 #
@@ -15,7 +15,8 @@ def _get_ensembl_archive_(version):
     '''
     version=int(version)
     d={}
-    d[82]="www.ensembl.org"
+    d[83]="www.ensembl.org"
+    d[82]="sep2015.archive.ensembl.org"
     d[81]="jul2015.archive.ensembl.org"
     d[80]="may2015.archive.ensembl.org"
     d[79]="mar2015.archive.ensembl.org"

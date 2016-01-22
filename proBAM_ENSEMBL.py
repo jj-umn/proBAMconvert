@@ -1,7 +1,8 @@
 from cogent.core.genetic_code import DEFAULT as standard_code
-from cogent.db.ensembl import Genome
+from cogent.db.ensembl import Genome,Species
 import sqlalchemy as sql
 import proBAM_biomart
+
 
 
 #
@@ -21,6 +22,8 @@ def get_Ensembl_prefix(species):
         ensembl_prefix.append(['FBtr','FBpp'])
     elif species=='danio_rerio':
         ensembl_prefix.append(['ENSDART','ENSDARP'])
+    else:
+        raise ValueError('Species not recognized')
     return ensembl_prefix
 
 #
@@ -36,7 +39,10 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species):
     '''
     print('Commencing ENSEMBL data retrieval')
     # create connection to ensembm database
-    ensembl=Genome(Species='human',Release=database_v,account=None)
+
+    Genome_species=Species.getCommonName(species.replace('_',' '))
+    ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+
 
     # convert IDs
     translation_table=ensembl.CoreDb.getTable('translation')
@@ -175,15 +181,16 @@ def get_ensembl_exons(ensembl,transcript_ids,psm_hash):
     for row in query.execute():
         if row[3] not in exon_hash.keys():
             exon_hash[row[3]]=[]
-        if psm_hash[row[3]]['start_exon_rank']==row[4]:
-            psm_hash[row[3]]['start_exon_rank']=row[2]
+        if row[3] in psm_hash.keys():
+            if psm_hash[row[3]]['start_exon_rank']==row[4]:
+                psm_hash[row[3]]['start_exon_rank']=row[2]
         exon_hash[row[3]].append([str(row[0]),str(row[1]),str(row[2])])
     return [exon_hash,psm_hash]
 
 #
 # Create SQ header for SAM file (ENSEMBL) get chr location and coordinates and store them in an array
 #
-def create_SQ_header(database_v):
+def create_SQ_header(database_v,species):
     '''
     :param database_v: database version
     :return: list of chromosomes with their size (from ENSEMBL)
@@ -191,7 +198,8 @@ def create_SQ_header(database_v):
     print 'Creating SAM header'
     SQ=[]
     # create connection to ensembm database
-    ensembl=Genome(Species='human',Release=database_v,account=None)
+    Genome_species=Species.getCommonName(species.replace('_',' '))
+    ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
 
     # convert IDs
     coord_table=ensembl.CoreDb.getTable('coord_system')

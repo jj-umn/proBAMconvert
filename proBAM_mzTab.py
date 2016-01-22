@@ -53,7 +53,6 @@ def get_PSM_mztab(psm_file):
                 proteins=[]
                 proteins.append({"protein":psm[3],'peptide_prev_aa':psm[15],"peptide_next_aa":psm[16]})
                 modifications=_get_modifications_(psm[1],psm[9],unimod,psimod)
-
                 temp_hash['search_hit'].append({"hit_rank":1,"modifications":modifications,
                                                 "modified_peptide":psm[1],"peptide":psm[1],
                                                 "search_score":{"XCorr":psm[1]},

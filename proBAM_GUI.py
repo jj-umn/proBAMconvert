@@ -8,8 +8,8 @@ import ScrolledText
 import time
 import proBAM
 import proBAM_input
+import proBAM_IDparser
 from functools import partial
-from threading import Thread
 
 #
 # Update log window periodically
@@ -77,7 +77,6 @@ def _getSpecies_(tk):
     species.set('homo sapiens')
 
     OptionMenu(tk,species,'homo sapiens','mus musculus','drosophila melanogaster','danio rerio').grid(row=3,column=1)
-    species=species.get().replace(' ','_')
 
 def _getDatabase_(tk):
     '''
@@ -90,7 +89,6 @@ def _getDatabase_(tk):
     database.set('Ensembl')
 
     OptionMenu(tk,database,'Ensembl').grid(row=4,column=1)
-    database=database.get().upper()
 
 def _getDatabaseVersion_(tk):
     '''
@@ -100,11 +98,11 @@ def _getDatabaseVersion_(tk):
     global database_v
     Label(text='Select database').grid(row=5,column=0)
     database_v= StringVar(tk)
-    database_v.set('82')
+    database_v.set('83')
 
-    OptionMenu(tk,database_v,'82','81','80','79','78','77','76','75','74','73','72','71','70','69','68','67','66','65'
+    OptionMenu(tk,database_v,'83','82','81','80','79','78','77','76','75','74','73','72','71','70','69','68','67','66','65'
                ,'64','63','62','61','60','59','58','57','56','55','54').grid(row=5,column=1)
-    database_v=int(database_v.get())
+
 
 
 def _getAllowedMismatches_(tk):
@@ -118,7 +116,6 @@ def _getAllowedMismatches_(tk):
     allowed_mismatches.set('0')
 
     OptionMenu(tk,allowed_mismatches,'0','1','2','3','4','5').grid(row=6,column=1)
-    allowed_mismatches=int(allowed_mismatches.get())
 
 #
 # Global variable declaration
@@ -146,11 +143,11 @@ def _get_global_arguments_():
 def _print_arguments_():
     print 'directory used:         '+directory
     print 'PSM file:               '+psm_file
-    print 'species:                '+species
-    print 'database:               '+database
-    print 'database version:       '+str(database_v)
+    print 'species:                '+species.get().replace(' ','_')
+    print 'database:               '+database.get().upper()
+    print 'database version:       '+str(int(database_v.get()))
     print 'decoy annotation:       '+str(decoy_annotation)
-    print 'allowed mismatches:     '+str(allowed_mismatches)
+    print 'allowed mismatches:     '+str(int(allowed_mismatches.get()))
     print 'proBAM convert version: '+str(version)
     print 'sorting order:          '+sorting_order
     print 'project name:           '+str(name.get())
@@ -176,14 +173,19 @@ def execute_proBAM(root):
     file=proBAM.open_sam_file(directory,name.get())
 
     # hash PSM_DATA and define variables
-    psm_hash=proBAM_input.get_PSM_hash(psm_file)
-    annotation=proBAM.parse_Protein_ID(psm_hash,species,database,decoy_annotation,database_v)
+    psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
+
+    parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
+                                       database.get().upper(),decoy_annotation,int(database_v.get()))
+    annotation=parse_results[1]
+    psm_hash=parse_results[0]
     transcript_hash=annotation[0]
     exon_hash=annotation[1]
 
     # convert to SAM
-    proBAM.create_SAM_header(file,version,database,sorting_order,database_v)
-    proBAM.PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file)
+    proBAM.create_SAM_header(file,version,database.get().upper(),sorting_order,
+                             int(database_v.get()),species.get().replace(' ','_'))
+    proBAM.PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,int(allowed_mismatches.get()),file)
     proBAM.sam_2_bam(directory,name.get())
 
     print("proBAM conversion succesful")
@@ -200,7 +202,7 @@ def GUI():
     #
     # Window initiation
     #
-    os.chdir('/home/vladie/Desktop/proBAM_mzTab')
+    #os.chdir('/home/vladie/Desktop/proBAM_mzTab')
     root = Tk()
     root.title("proBAM converter: convert pepxml/mzid to proBAM")
     root.geometry("600x700")
@@ -227,10 +229,11 @@ def GUI():
     #
     # Button and utility assignment
     #
+
     Button(text='Choose file',command=_openFile_,fg='blue').grid(row=0,column=0)
     Button(text='working directory',command=_getDirectroy_,fg='blue').grid(row=1,column=0)
     _getProjectName_(root)
-    _getSpecies_(root)
+    species=_getSpecies_(root)
     _getDatabase_(root)
     _getDatabaseVersion_(root)
     _getAllowedMismatches_(root)
@@ -250,6 +253,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
+    os.chdir("/home/vladie/Desktop/mESC_ignolia")
     GUI()
 
 
