@@ -35,8 +35,8 @@ def get_PSM_mztab(psm_file):
     with open(psm_file,'rU') as csvfile:
         # skip comments
         for row in csvfile:
-            tag= row[0]+row[1]+row[2]
-            if tag=='COM' or tag=='MTD':
+            tag= row[0:3]
+            if tag=='COM' or tag=='MTD' or tag=="" or tag=="\n":
                 next(csvfile)
             else:
                 break
@@ -53,12 +53,15 @@ def get_PSM_mztab(psm_file):
         #iterate over all iterations and bundle psm from same spectrum
         spectrum={}
         for row in mztab:
-            #print row
-            if row[10] not in spectrum.keys():
-                spectrum[row[10]]=[]
-                spectrum[row[10]].append(row)
-            else:
-                spectrum[row[10]].append(row)
+            if row!="" and row!="\n" and len(row)!=0:
+                if row[0]=="PSM":
+                    print row[0]
+                    if row[10] not in spectrum.keys():
+                        spectrum[row[10]]=[]
+                        spectrum[row[10]].append(row)
+                    else:
+                        spectrum[row[10]].append(row)
+
 
         #iterate over all spectrum to store in processable dictionairy
         for key in spectrum.keys():
@@ -72,7 +75,7 @@ def get_PSM_mztab(psm_file):
                 modifications=_get_modifications_(psm[1],psm[9],unimod,psimod)
                 temp_hash['search_hit'].append({"hit_rank":1,"modifications":modifications,
                                                 "modified_peptide":psm[1],"peptide":psm[1],
-                                                "search_score":{"XCorr":psm[1]},
+                                                "search_score":{"XCorr":psm[8]},
                                                 "proteins":proteins,"num_missed_cleavages":"0"})
             psm_hash.append(temp_hash)
     return psm_hash
