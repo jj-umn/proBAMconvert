@@ -102,13 +102,13 @@ def _getDatabaseVersion_(tk):
     :return: selected database version
     '''
     global database_v
-    Label(text='Select database',background="#f2f2f2",width=30,anchor=W).grid(row=5,column=0)
+    Label(text='Select database version',background="#f2f2f2",width=30,anchor=W).grid(row=5,column=0)
     database_v= StringVar(tk)
     database_v.set('83')
 
     menu=OptionMenu(tk,database_v,'83','82','81','80','79','78','77','76','75','74','73','72','71','70','69','68','67','66','65'
                ,'64','63','62','61','60','59','58','57','56','55','54')
-    menu.config(width=15,)
+    menu.config(width=15,background="#d9d9d9")
     menu.grid(row=5,column=1)
 
 def _getMapDecoy_(tk):
@@ -186,7 +186,7 @@ def _print_arguments_():
     print 'sorting order:          '+sorting_order
     print 'project name:           '+str(name.get())
     print 'map decoys:             '+map_decoy.get()
-    print 'remove duplicate PSMs   '+rm_duplicates.get()
+    print 'remove duplicate PSMs:  '+rm_duplicates.get()
 
 #
 # Execute proBAMconvert
@@ -229,6 +229,12 @@ def execute_proBAM(root):
     print("%f seconds" % (time.time() - start_time))         # output script run time
     root.config(cursor="")
 #
+# get path of script
+#
+def getScriptPath():
+    return os.path.dirname(os.path.realpath(sys.argv[0]))
+
+#
 # GUI creation
 #
 
@@ -239,12 +245,12 @@ def GUI():
     #
     # Window initiation
     #
-    #os.chdir('/home/vladie/Desktop/proBAM_mzTab')
+
     root = Tk()
-    root.title("proBAMconverter")
+    root.title("proBAMconvert")
     root.geometry("620x900")
     root.configure(background="#f2f2f2",borderwidth=20)
-    logo=PhotoImage(file="/home/vladie/PycharmProjects/proBAM/python/proBAMconvert_logo.gif")
+    logo=PhotoImage(file=getScriptPath()+'/'+"proBAMconvert_logo.gif")
     Label(root, image=logo, background="#f2f2f2").grid(row=15,columnspan=2)
 
     #style
@@ -256,11 +262,12 @@ def GUI():
     #
     # Rederict standart output to console
     #
+
     Label(text='Console:',pady=5,width=70,background="#f2f2f2").grid(row=12,columnspan=2)
     global std_label
     std_frame=Frame().grid(row=13,columnspan=2)
 
-    std_text = ScrolledText.ScrolledText(std_frame)
+    std_text = ScrolledText.ScrolledText(std_frame,height=20)
     std_text.grid(row=14,columnspan=2)
 
     sys.stdout = Std_redirector(std_text)
@@ -288,8 +295,8 @@ def GUI():
     _getAllowedMismatches_(root)
     execute_proBAM_argumented=partial(execute_proBAM,root)
     global proBam_button
-    proBam_button=Button(text='Convert',fg="blue",command=execute_proBAM_argumented)
-    proBam_button.grid(row=9,columnspan=2)
+    proBam_button=Button(text='Convert',fg="blue",command=execute_proBAM_argumented,width=20,height=2,borderwidth=3)
+    proBam_button.grid(row=9,columnspan=2,pady=10)
     root.update_idletasks()
     root.mainloop()
 
@@ -301,7 +308,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    os.chdir("/home/vladie/Desktop/mESC_ignolia")
+    #os.chdir("/home/vladie/Desktop/mESC_ignolia")
     GUI()
 
 

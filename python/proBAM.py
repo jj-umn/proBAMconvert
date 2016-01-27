@@ -223,7 +223,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
 
         # convert unmapped PSMs with their own converter
         if 'search_hit' not in psm.keys():
-            nohit_PSM_to_SAM(psm)
+            nohit_PSM_to_SAM(psm,file)
         else:
             for row in psm['search_hit']:
                 if rm_duplicates=="Y":
@@ -236,21 +236,35 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                             decoy=1
                             key=row['proteins'][p]['protein'].upper().split(d)[1]
                             if key in transcript_hash.keys():
-                                decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,file,
-                                                 map_decoy,rm_duplicates)
+                                temp_result= decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,
+                                                 map_decoy)
+                                if rm_duplicates=="Y":
+                                    dup_key= str(temp_result[9])+"_"+str(temp_result[2])+"_"+"_"+str(temp_result[3])
+                                    if dup_key not in dup.keys():
+                                        dup[dup_key]=1
+                                        write_psm(temp_result,file)
+                                else:
+                                    write_psm(temp_result,file)
                             else:
-                                unannotated_PSM_to_SAM(psm,row,decoy,file)
+                                temp_result=unannotated_PSM_to_SAM(psm,row,decoy)
+                                if rm_duplicates=="Y":
+                                    dup_key= str(temp_result[9])+"_"+str(temp_result[2])+"_"+"_"+str(temp_result[3])
+                                    if dup_key not in dup.keys():
+                                        dup[dup_key]=1
+                                        write_psm(temp_result,file)
+                                else:
+                                    write_psm(temp_result,file)
 
                     if decoy==0:
                         key=row['proteins'][p]['protein']
                         # Filter out PSM where transcript sequences were not found/ non-existent
                         if key not in transcript_hash.keys():
-                            unannotated_PSM_to_SAM(psm,row,decoy,file)
+                            write_psm(unannotated_PSM_to_SAM(psm,row,decoy),file)
                         else:
                             protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[key]['protein_seq']
                                                                ,allowed_mismatches)
                             if len(protein_hit)==0:
-                                unannotated_PSM_to_SAM(psm,row,decoy,file)
+                                write_psm(unannotated_PSM_to_SAM(psm,row,decoy),file)
                             else:
                                 # map peptide on protein and retrieve hit position, iterate over all hits
                                 for phit in protein_hit:
@@ -326,9 +340,10 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     temp_result[22]=create_XG(phit[1])
                                     # remove duplicates if rm_duplicates=Y
                                     if rm_duplicates=="Y":
-                                        dup_key= str(temp_result[9])+"_"+str(transcript_hash[key]['chr'])+"_"+\
-                                                    str(transcript_hash[key]['strand'])+"_"+str(temp_result[3])
+                                        dup_key= dup_key= str(temp_result[9])+"_"+\
+                                                          str(temp_result[2])+"_"+str(temp_result[3])
                                         if dup_key not in dup.keys():
+                                            print dup_key
                                             dup[dup_key]=1
                                             write_psm(temp_result,file)
                                     else:
@@ -633,7 +648,7 @@ def nohit_PSM_to_SAM(psm,file):
 #
 # Function to convert unannotated PSMs to SAM
 #
-def unannotated_PSM_to_SAM(psm,row,decoy,file):
+def unannotated_PSM_to_SAM(psm,row,decoy):
     '''
     :param psm: psm dictionairy
     :param row: unnanotated PSM row
@@ -704,13 +719,13 @@ def unannotated_PSM_to_SAM(psm,row,decoy,file):
         temp_result[22]="XG:Z:U"
     else:
         temp_result[22]="XG:Z:D"
-    write_psm(temp_result,file)
+    return temp_result
 
 #
 # Function to convert decoy PSM to SAM format
 #
 
-def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,file,map_decoy):
+def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,map_decoy):
     '''
     :param psm: psm dictionairy
     :param row: row where decoy found
@@ -728,7 +743,7 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,fi
     else:
         protein_hit=[]
     if len(protein_hit)==0:
-        unannotated_PSM_to_SAM(psm,row,1,file)
+         return unannotated_PSM_to_SAM(psm,row,1)
     else:
         # map peptide on protein and retrieve hit position, iterate over all hits
         for phit in protein_hit:
@@ -802,7 +817,7 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,fi
             temp_result[21]="XT:i:NA"
             #XG: Petide type
             temp_result[22]='XG:Z:D'
-            write_psm(temp_result,file)
+            return temp_result
 #
 # Function to calculate distance between 2 strings
 #
@@ -893,7 +908,7 @@ if __name__=='__main__':
 
     # convert to SAM
     create_SAM_header(file,version,database,sorting_order,database_v,species)
-    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy)
+    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates)
     sam_2_bam(directory,name)
 
 

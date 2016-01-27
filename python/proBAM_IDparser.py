@@ -35,19 +35,19 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v):
     while found==0 and count<max:
         if "|" in PID_list[count]:
             decrypted_list=PID_list[count].split("|")
-            find_result=find_annotation(decrypted_list,species)
+            find_result=_find_annotation_(decrypted_list,species)
             if find_result[0]==1:
                 found=1
                 break
         elif "_" in PID_list[count]:
             decrypted_list=PID_list[count].split("_")
-            find_result=find_annotation(decrypted_list,species)
+            find_result=_find_annotation_(decrypted_list,species)
             if find_result[0]==1:
                 found=1
                 break
         else:
             decrypted_list=[PID_list[count]]
-            find_result=find_annotation(decrypted_list,species)
+            find_result=_find_annotation_(decrypted_list,species)
             if find_result[0]==1:
                 found=1
                 break
@@ -66,7 +66,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v):
             if 'search_hit' in key.keys():
                 for psm in key['search_hit']:
                     for i in range (0,len(psm['proteins'])):
-                        psm['proteins'][i]['protein']=update_protein_accession(psm['proteins'][i]['protein'],
+                        psm['proteins'][i]['protein']=_update_protein_accession_(psm['proteins'][i]['protein'],
                                                                                decoy_annotation,find_result[2])
                         hit=0
                         for d in decoy_annotation:
@@ -86,7 +86,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v):
             elif find_result[1]=="ENSEMBL_PR":
                 annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'protein',database_v,species)
             elif find_result[1]=="UNIPROT":
-                conversion=id_map('UNIPROT/SWISSPROT','ENSEMBL',protein_ID,psm_hash,species,decoy_annotation,database_v)
+                conversion=_id_map_('UNIPROT/SWISSPROT','ENSEMBL',protein_ID,psm_hash,species,decoy_annotation,database_v)
                 psm_protein_id=conversion[0]
                 psm_hash=conversion[1]
                 annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'transcript',database_v,species)
@@ -101,7 +101,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v):
 # Find annotation in list of terms
 #
 
-def find_annotation(term_list,species):
+def _find_annotation_(term_list,species):
     '''
     :param term_list: list of terms of possible identifiers
     :param species: species
@@ -137,7 +137,13 @@ def find_annotation(term_list,species):
 # Parse protein accesions
 #
 
-def update_protein_accession(accession,decoy_annotation,hit):
+def _update_protein_accession_(accession,decoy_annotation,hit):
+    '''
+    :param accession: list of possible protein ID terms
+    :param decoy_annotation: list of decoy annotations
+    :param hit: position of protein ID
+    :return: protein ID
+    '''
     decoy=0
     if any(decoy in accession.upper() for decoy in decoy_annotation):
         decoy=1
@@ -156,7 +162,7 @@ def update_protein_accession(accession,decoy_annotation,hit):
 #
 # Retrieve matched protein IDs
 #
-def get_protein_ID(psm_hash,decoy_annotation):
+def _get_protein_ID_(psm_hash,decoy_annotation):
     '''
     :param psm_hash: dictionairy containing PSM file
     :param decoy_annotation: list of decoy annotation tags
@@ -185,7 +191,7 @@ def get_protein_ID(psm_hash,decoy_annotation):
 #
 # Function to map protein IDs between annotations
 #
-def id_map(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy_annotation,database_v):
+def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy_annotation,database_v):
     '''
     :param from_annotation: supplied annotation (i.e. swissprot)
     :param to_annotation: target annotation (i.e. ENSEMBL)
