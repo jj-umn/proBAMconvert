@@ -28,7 +28,29 @@ import proBAM
 import proBAM_input
 import proBAM_IDparser
 from functools import partial
-from PIL import Image
+
+#import needed for stand-alone executable
+import proBAM_mzTab
+import proBAM_mzid
+import proBAM_ENSEMBL
+import proBAM_biomart
+import six
+import packaging
+import packaging.version
+import packaging.specifiers
+import packaging.markers
+import csv
+from pyteomics import mass,xml
+from pyteomics import mzid,mass,xml
+import re
+import time
+from itertools import imap
+import operator
+import re
+import pysam
+import pysam.ctabixproxies
+from bioservices import BioMart
+import sys
 
 #
 # Update log window periodically

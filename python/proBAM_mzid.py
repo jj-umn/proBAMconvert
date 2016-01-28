@@ -18,8 +18,7 @@
 __author__ = 'vladie'
 
 from pyteomics import mzid,mass,xml
-from pyopenms import *
-import re
+
 
 #
 # Parse mzid file into dictionairy
