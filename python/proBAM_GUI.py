@@ -117,7 +117,7 @@ def _getSpecies_(tk):
     species= StringVar(tk)
     species.set('homo sapiens')
 
-    menu=OptionMenu(tk,species,'homo sapiens','mus musculus','drosophila melanogaster','danio rerio')
+    menu=OptionMenu(tk,species,'homo sapiens','mus musculus','drosophila melanogaster','danio rerio','arabidopsis thaliana')
     menu.config(width=15)
     menu.grid(row=3,column=1)
 
@@ -347,7 +347,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    #os.chdir("/home/vladie/Desktop/mESC_ignolia")
+    #os.chdir("/home/vladie/Desktop/")
     GUI()
 
 

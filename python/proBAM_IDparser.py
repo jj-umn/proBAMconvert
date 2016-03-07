@@ -235,6 +235,7 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
                             map[row[2]]=row
                     else:
                         map[row[2]]=row
+
     for key in psm_hash:
         if 'search_hit' in key.keys():
             for psm in key['search_hit']:
@@ -251,7 +252,6 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
                         if psm['proteins'][i]['protein'] in map.keys():
                             new_psm_protein_id.append(map[psm['proteins'][i]['protein']][0])
                             psm['proteins'][i]['protein']=map[psm['proteins'][i]['protein']][0]
-
 
     #retain only unique IDs
     return [new_psm_protein_id,psm_hash]

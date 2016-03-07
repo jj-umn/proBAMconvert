@@ -25,47 +25,50 @@ import sys
 #
 #Function that links the correct database archive with version number
 #
-def _get_ensembl_archive_(version):
+def _get_ensembl_archive_(version,species):
     '''
     :param version: Ensembl version
     :return: ENSEMBL repository for a specific version
     '''
     version=int(version)
-    d={}
-    d[83]="www.ensembl.org"
-    d[82]="sep2015.archive.ensembl.org"
-    d[81]="jul2015.archive.ensembl.org"
-    d[80]="may2015.archive.ensembl.org"
-    d[79]="mar2015.archive.ensembl.org"
-    d[78]="dec2014.archive.ensembl.org"
-    d[77]="oct2014.archive.ensembl.org"
-    d[76]="aug2014.archive.ensembl.org"
-    d[75]="feb2014.archive.ensembl.org"
-    d[74]="dec2013.archive.ensembl.org"
-    d[73]="sep2013.archive.ensembl.org"
-    d[72]="jun2013.archive.ensembl.org"
-    d[71]="apr2013.archive.ensembl.org"
-    d[70]="jan2013.archive.ensembl.org"
-    d[69]="oct2012.archive.ensembl.org"
-    d[68]="jul2012.archive.ensembl.org"
-    d[67]="may2012.archive.ensembl.org"
-    d[66]="feb2012.archive.ensembl.org"
-    d[65]="dec2011.archive.ensembl.org"
-    d[64]="sep2011.archive.ensembl.org"
-    d[63]="jun2011.archive.ensembl.org"
-    d[62]="apr2011.archive.ensembl.org"
-    d[61]="feb2011.archive.ensembl.org"
-    d[60]="nov2010.archive.ensembl.org"
-    d[59]="aug2010.archive.ensembl.org"
-    d[58]="may2010.archive.ensembl.org"
-    d[57]="mar2010.archive.ensembl.org"
-    d[56]="sep2009.archive.ensembl.org"
-    d[55]="jul2009.archive.ensembl.org"
-    d[54]="may2009.archive.ensembl.org"
-    if version in d.keys():
-        return d[version]
+    if species=='arabidopsis_thaliana':
+        return 'plants.ensembl.org'
     else:
-        raise ValueError('unsupported ensembl version')
+        d={}
+        d[83]="www.ensembl.org"
+        d[82]="sep2015.archive.ensembl.org"
+        d[81]="jul2015.archive.ensembl.org"
+        d[80]="may2015.archive.ensembl.org"
+        d[79]="mar2015.archive.ensembl.org"
+        d[78]="dec2014.archive.ensembl.org"
+        d[77]="oct2014.archive.ensembl.org"
+        d[76]="aug2014.archive.ensembl.org"
+        d[75]="feb2014.archive.ensembl.org"
+        d[74]="dec2013.archive.ensembl.org"
+        d[73]="sep2013.archive.ensembl.org"
+        d[72]="jun2013.archive.ensembl.org"
+        d[71]="apr2013.archive.ensembl.org"
+        d[70]="jan2013.archive.ensembl.org"
+        d[69]="oct2012.archive.ensembl.org"
+        d[68]="jul2012.archive.ensembl.org"
+        d[67]="may2012.archive.ensembl.org"
+        d[66]="feb2012.archive.ensembl.org"
+        d[65]="dec2011.archive.ensembl.org"
+        d[64]="sep2011.archive.ensembl.org"
+        d[63]="jun2011.archive.ensembl.org"
+        d[62]="apr2011.archive.ensembl.org"
+        d[61]="feb2011.archive.ensembl.org"
+        d[60]="nov2010.archive.ensembl.org"
+        d[59]="aug2010.archive.ensembl.org"
+        d[58]="may2010.archive.ensembl.org"
+        d[57]="mar2010.archive.ensembl.org"
+        d[56]="sep2009.archive.ensembl.org"
+        d[55]="jul2009.archive.ensembl.org"
+        d[54]="may2009.archive.ensembl.org"
+        if version in d.keys():
+            return d[version]
+        else:
+            raise ValueError('unsupported ensembl version')
 
 
 #
@@ -81,6 +84,7 @@ def _get_ensembl_dataset_(species):
     d['mus_musculus']='mmusculus_gene_ensembl'
     d['drosophila_melanogaster']='dmelanogaster_gene_ensembl'
     d['danio_rerio']='drerio_gene_ensembl'
+    d['arabidopsis_thaliana']='athaliana_eg_gene'
 
     if species not in d.keys():
         print 'Error: unsupported species'
@@ -112,20 +116,34 @@ def retrieve_data_from_biomart(version,species,transcript_id):
     :param transcript_id: list of transcript IDs
     :return: BioMart results
     '''
+
+    #create connection
     tr_query=_id_in_xml_query_(transcript_id)
-    version=_get_ensembl_archive_(version)
+    version=_get_ensembl_archive_(version,species)
     dataset=_get_ensembl_dataset_(species)
     biomart = BioMart(host=version)
+
+    #add filters
     biomart.add_dataset_to_xml(dataset)
     biomart.add_filter_to_xml("ensembl_transcript_id",tr_query)
+
+    #add attributes
     biomart.add_attribute_to_xml('ensembl_transcript_id')
     biomart.add_attribute_to_xml("chromosome_name")
     biomart.add_attribute_to_xml("strand")
     biomart.add_attribute_to_xml("coding")
     attributes=biomart.attributes(dataset)
+
+    #execute query
     xml_query=biomart.get_xml()
+
+    # create bypass for plants database
+    if species=="arabidopsis_thaliana":
+        xml_query=xml_query.replace('virtualSchemaName = "default"','virtualSchemaName = "plants_mart_30"')
+
     result=biomart.query(xml_query)
     result=result.split("\n")
+
     return result
 
 #
@@ -139,23 +157,72 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
     :param psm_protein_id: list of IDs to be converted
     :return: BioMart results
     '''
-    new_psm_protein_id=[]
+
+    # If species is in plantsDB, execute plants adjusted function
+    if species=="arabidopsis_thaliana":
+        result=id_map_ensembl_plants(to_annotation,version,species,psm_protein_id)
+        return result
+    else:
+
+        #create connection
+        query_string=_id_in_xml_query_(psm_protein_id)
+        version=_get_ensembl_archive_(version,species)
+        dataset=_get_ensembl_dataset_(species)
+        biomart = BioMart(host=version)
+
+        #add filters
+        biomart.add_dataset_to_xml(dataset)
+        biomart.add_filter_to_xml(to_annotation,query_string)
+
+        #add attributs
+        biomart.add_attribute_to_xml("ensembl_transcript_id")
+        biomart.add_attribute_to_xml("transcript_length")
+        biomart.add_attribute_to_xml("uniprot_swissprot")
+        attributes=biomart.attributes(dataset)
+
+        #execute query
+        xml_query=biomart.get_xml()
+        result=biomart.query(xml_query)
+        result=result.split("\n")
+
+        return result
+
+#
+# Function that maps Identfiers to Ensembl adjusted for plant DB compatibility
+#
+
+def id_map_ensembl_plants(to_annotation,version,species,psm_protein_id):
+
+    #create connection
     query_string=_id_in_xml_query_(psm_protein_id)
-    version=_get_ensembl_archive_(version)
+    version=_get_ensembl_archive_(version,species)
     dataset=_get_ensembl_dataset_(species)
     biomart = BioMart(host=version)
+
+    #add filters
     biomart.add_dataset_to_xml(dataset)
-    biomart.add_filter_to_xml(to_annotation,query_string)
+    biomart.add_filter_to_xml(to_annotation+"_accession",query_string)
+
+    #add attributs
     biomart.add_attribute_to_xml("ensembl_transcript_id")
-    biomart.add_attribute_to_xml("transcript_length")
-    biomart.add_attribute_to_xml("uniprot_swissprot")
-    attributes=biomart.attributes(dataset)
+    biomart.add_attribute_to_xml("transcript_start")
+    biomart.add_attribute_to_xml("uniprot_swissprot_accession")
+    biomart.add_attribute_to_xml("transcript_end")
+
+    #execute query
     xml_query=biomart.get_xml()
-    result=biomart.query(xml_query)
-    result=result.split("\n")
+    xml_query=xml_query.replace('virtualSchemaName = "default"','virtualSchemaName = "plants_mart_30"')
+
+    #parse results and adjust length
+    temp_result=biomart.query(xml_query).split("\n")
+    result=[]
+    for row in temp_result:
+        items=row.split("\t")
+        # print row
+        if len(items)==4:
+            length=int(items[3])-int(items[1])+1
+            result.append(items[0]+"\t"+str(length)+"\t"+items[2])
     return result
-
-
 
 
 

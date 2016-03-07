@@ -16,7 +16,7 @@
 ##############################################################################
 
 from cogent.core.genetic_code import DEFAULT as standard_code
-from cogent.db.ensembl import Genome,Species
+from cogent.db.ensembl import Genome,Species,host
 import sqlalchemy as sql
 import proBAM_biomart
 
@@ -39,6 +39,8 @@ def get_Ensembl_prefix(species):
         ensembl_prefix.append(['FBtr','FBpp'])
     elif species=='danio_rerio':
         ensembl_prefix.append(['ENSDART','ENSDARP'])
+    elif species=='arabidopsis_thaliana':
+        ensembl_prefix.append(['AT','AT'])
     else:
         raise ValueError('Species not recognized')
     return ensembl_prefix
@@ -54,11 +56,16 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species):
     :param species: species name
     :return: dictionairy mapping proteins into ENSEMBL
     '''
-    print('Commencing ENSEMBL data retrieval')
-    # create connection to ensembm database
 
-    Genome_species=Species.getCommonName(species.replace('_',' '))
-    ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+    print('Commencing ENSEMBL data retrieval')
+    # create connection to ensembl database
+    if species=="arabidopsis_thaliana":
+        Genome_species=Species.getCommonName(species.replace('_',' '))
+        account=host.HostAccount(host="mysql-eg-publicsql.ebi.ac.uk",user="anonymous",passwd="",port=4157)
+        ensembl=Genome(Species=Genome_species,account=account,Release=30)
+    else:
+        Genome_species=Species.getCommonName(species.replace('_',' '))
+        ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
 
 
     # convert IDs
@@ -215,8 +222,14 @@ def create_SQ_header(database_v,species):
     print 'Creating SAM header'
     SQ=[]
     # create connection to ensembm database
-    Genome_species=Species.getCommonName(species.replace('_',' '))
-    ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+        # create connection to ensembl database
+    if species=="arabidopsis_thaliana":
+        Genome_species=Species.getCommonName(species.replace('_',' '))
+        account=host.HostAccount(host="mysql-eg-publicsql.ebi.ac.uk",user="anonymous",passwd="",port=4157)
+        ensembl=Genome(Species=Genome_species,account=account,Release=30)
+    else:
+        Genome_species=Species.getCommonName(species.replace('_',' '))
+        ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
 
     # convert IDs
     coord_table=ensembl.CoreDb.getTable('coord_system')
