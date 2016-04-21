@@ -176,6 +176,19 @@ def _getRMDuplicates_(tk):
     menu.config(width=15)
     menu.grid(row=7,column=1)
 
+def _get3frame_(tk):
+    '''
+    :param tk: window
+    :return: selected map duplicates option
+    '''
+    global three_frame_translation
+    Label(text="3-frame translation",background="#f2f2f2",width=30,anchor=W).grid(row=8,column=0)
+    three_frame_translation=StringVar(tk)
+    three_frame_translation.set("N")
+    menu=OptionMenu(tk,three_frame_translation,"N","Y")
+    menu.config(width=15)
+    menu.grid(row=8,column=1)
+
 
 def _getAllowedMismatches_(tk):
     '''
@@ -183,13 +196,13 @@ def _getAllowedMismatches_(tk):
     :return: selected max mismatches
     '''
     global allowed_mismatches
-    Label(text='Allowed mismatches',background="#f2f2f2",width=30,anchor=W).grid(row=8,column=0)
+    Label(text='Allowed mismatches',background="#f2f2f2",width=30,anchor=W).grid(row=9,column=0)
     allowed_mismatches= StringVar(tk)
     allowed_mismatches.set('0')
 
     menu=OptionMenu(tk,allowed_mismatches,'0','1','2','3','4','5')
     menu.config(width=15)
-    menu.grid(row=8,column=1)
+    menu.grid(row=9,column=1)
 
 #
 # Global variable declaration
@@ -226,6 +239,7 @@ def _print_arguments_():
     print 'project name:           '+str(name.get())
     print 'map decoys:             '+map_decoy.get()
     print 'remove duplicate PSMs:  '+rm_duplicates.get()
+    print '3-frame translation:    '+three_frame_translation.get()
 
 #
 # Execute proBAMconvert
@@ -251,7 +265,8 @@ def execute_proBAM(root):
     psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
 
     parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
-                                       database.get().upper(),decoy_annotation,int(database_v.get()))
+                                       database.get().upper(),decoy_annotation,int(database_v.get()),
+                                        three_frame_translation.get())
     annotation=parse_results[1]
     psm_hash=parse_results[0]
     transcript_hash=annotation[0]
@@ -261,7 +276,7 @@ def execute_proBAM(root):
     proBAM.create_SAM_header(file,version,database.get().upper(),sorting_order,
                              int(database_v.get()),species.get().replace(' ','_'))
     proBAM.PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,int(allowed_mismatches.get()),
-                   file,map_decoy.get(),rm_duplicates.get())
+                   file,map_decoy.get(),rm_duplicates.get(),three_frame_translation.get())
     proBAM.sam_2_bam(directory,name.get())
 
     print("proBAM conversion succesful")
@@ -331,11 +346,12 @@ def GUI():
     _getDatabaseVersion_(root)
     _getMapDecoy_(root)
     _getRMDuplicates_(root)
+    _get3frame_(root)
     _getAllowedMismatches_(root)
     execute_proBAM_argumented=partial(execute_proBAM,root)
     global proBam_button
     proBam_button=Button(text='Convert',fg="blue",command=execute_proBAM_argumented,width=20,height=2,borderwidth=3)
-    proBam_button.grid(row=9,columnspan=2,pady=10)
+    proBam_button.grid(row=10,columnspan=2,pady=10)
     root.update_idletasks()
     root.mainloop()
 
@@ -347,7 +363,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    #os.chdir("/home/vladie/Desktop/")
+    os.chdir("/home/vladie/Desktop/Daria")
     GUI()
 
 

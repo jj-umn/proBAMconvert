@@ -32,6 +32,7 @@ import sys
 import getopt
 import os
 import proBAM_IDparser
+from cogent.core.genetic_code import DEFAULT as standard_code
 
 try:
     from collections import OrderedDict
@@ -73,6 +74,7 @@ def get_input_variables():
     global sorting_order
     global map_decoy
     global rm_duplicates
+    global three_frame_translation
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
@@ -91,6 +93,8 @@ def get_input_variables():
     sorting_order='unknown'
     map_decoy=""
     rm_duplicates=""
+    three_frame_translation
+
 
     #
     # Read command line args
@@ -98,7 +102,7 @@ def get_input_variables():
     #
 
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a",["name=","mismatches=","version=","database=","species=","file=","directory=","rm_duplicates=","map_decoy="])
+        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t",["name=","mismatches=","version=","database=","species=","file=","directory=","rm_duplicates=","map_decoy=","tri_frame_translation="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit()
@@ -130,6 +134,8 @@ def get_input_variables():
         if o in ('-r','--rm_duplicates'):
             rm_duplicates=a
         if o in ('-a','--map_decoy'):
+            map_decoy=a
+        if o in ('-t','--three_frame_translation'):
             map_decoy=a
 
     #
@@ -164,6 +170,8 @@ def get_input_variables():
         rm_duplicats="N"
     if map_decoy!="Y":
         map_decoy="N"
+    if three_frame_translation!="Y":
+        three_frame_translation="N"
 
     allowed_mismatches=mismatches
     database_v=version
@@ -175,8 +183,8 @@ def get_input_variables():
             "database                                       " + str(database) +"\n"+
             "database version:                              " + str(database_v) +"\n"+
             "species:                                       " + str(species) +"\n"+
-            "allowed mismatches:                            " + str(allowed_mismatches))
-
+            "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
+            "three_frame_translation:                         " + str(three_frame_translation))
 
 
 ###############################
@@ -224,7 +232,8 @@ def open_sam_file(directory,name):
 #
 # Convert PSM to SAM
 #
-def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates):
+def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
+            three_frame_translation):
     '''
     :param psm_hash: dictionairy of psm files
     :param transcript_hash: dictionairy of transcripts
@@ -278,8 +287,11 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                         if key not in transcript_hash.keys():
                             write_psm(unannotated_PSM_to_SAM(psm,row,decoy),file)
                         else:
-                            protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[key]['protein_seq']
-                                                               ,allowed_mismatches)
+                            if three_frame_translation=="Y":
+                                protein_hit=map_peptide_to_protein_3frame(row['peptide'],transcript_hash[key]['transcript_seq'],allowed_mismatches,transcript_hash[key]['strand'])
+                            else:
+                                protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[key]['protein_seq']
+                                                                   ,allowed_mismatches)
                             if len(protein_hit)==0:
                                 write_psm(unannotated_PSM_to_SAM(psm,row,decoy),file)
                             else:
@@ -303,7 +315,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                                              transcript_hash[key]['start_exon_rank'],
                                                                              row['peptide'],
                                                                              exon_hash[transcript_hash[key]['transcript_id']],
-                                                                             transcript_hash[key]['chr'])
+                                                                             transcript_hash[key]['chr'],
+                                                                             three_frame_translation)
                                     #MAPQ
                                     temp_result[4]=255
                                     #CIGAR
@@ -317,12 +330,16 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #TLEN
                                     temp_result[8]=0
                                     #SEQ
+                                    if three_frame_translation=='Y':
+                                        phit_loc=phit[0]
+                                    else:
+                                        phit_loc=phit[0]*3
                                     if int(transcript_hash[key]['strand'])==1:
                                         temp_result[9]=str(transcript_hash[key]['transcript_seq']\
-                                                   [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))])
+                                                   [phit_loc:(phit_loc+(len(row['peptide'])*3))])
                                     else:
                                         temp_result[9]=_reverse_complement_(str(transcript_hash[key]['transcript_seq']\
-                                                   [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))]))
+                                                   [phit_loc:(phit_loc+(len(row['peptide'])*3))]))
                                     #QUAL
                                     temp_result[10]='*'
                                     #
@@ -480,10 +497,30 @@ def map_peptide_to_protein(peptide_seq,protein_seq,allowed_mismatches):
     return hits
 
 #
+#Function that maps peptide on the corresponding protein, alowing mismatches ( as specified)
+# and returns the first left base position mapped after translating the transcript sequence in 3-frames
+#
+def map_peptide_to_protein_3frame(peptide_seq,transcript_seq,allowed_mismatches,strand):
+    size_adjust=-1    # adjust size of transcript for starting at +1/+2frame
+    hits=[]
+    pep_length=len(peptide_seq)
+    frame=[0]*3
+    frame[0]=standard_code.translate(transcript_seq)
+    frame[1]=standard_code.translate(transcript_seq[1:])
+    frame[2]=standard_code.translate(transcript_seq[2:])
+    for f in frame:
+        size_adjust+=1
+        for i in range(0,(len(f)-pep_length)):
+            if hamming(peptide_seq,f[i:pep_length+i]) <= allowed_mismatches:
+                adjusted_hit_pos=(i*3)+size_adjust
+                hits.append([adjusted_hit_pos,hamming(peptide_seq,f[i:pep_length+i])])
+    return hits
+
+#
 # Function returns genomic position of the leftmost base
 #
 #
-def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,chr):
+def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,chr,three_frame_translation):
     '''
     :param phit: location of peptide hit
     :param strand: transcript strand
@@ -494,12 +531,26 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     :param chr: transcript chr
     :return: genomic start position
     '''
-    if strand=='1':
-        tr_pos=(phit*3)
+    if three_frame_translation=='Y':
+        if strand=='1':
+            tr_pos=(phit)
+            pointer=0
+            #start_exon_rank=0
+        else:
+            tr_pos=(phit)+(len(peptide)*3)-1
+            #start_exon_rank=len(exons)+1
+            pointer=0
+        gen_pos=0
+        offset=0
+        start_exon_rank=1
+
     else:
-        tr_pos=(phit*3)+(len(peptide)*3)-1
-    pointer=1
-    gen_pos=0
+        if strand=='1':
+            tr_pos=(phit*3)
+        else:
+            tr_pos=(phit*3)+(len(peptide)*3)-1
+        pointer=1
+        gen_pos=0
 
     # iterate over exons till peptide position is encoutered
     exons=sorted(exons,key=lambda x: int(x[2]))
@@ -916,7 +967,7 @@ if __name__=='__main__':
 
     # hash PSM_DATA and define variables
     psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
-    parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v)
+    parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation)
     annotation=parse_results[1]
     psm_hash=parse_results[0]
     transcript_hash=annotation[0]
@@ -924,7 +975,8 @@ if __name__=='__main__':
 
     # convert to SAM
     create_SAM_header(file,version,database,sorting_order,database_v,species)
-    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates)
+    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
+            three_frame_translation)
     sam_2_bam(directory,name)
 
 

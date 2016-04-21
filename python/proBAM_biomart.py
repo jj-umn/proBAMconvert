@@ -109,7 +109,7 @@ def _id_in_xml_query_(transcipt_id):
 #
 # Function that retrieves cds,strand,chr and ensembl_transcript_id from BioMart
 #
-def retrieve_data_from_biomart(version,species,transcript_id):
+def retrieve_data_from_biomart(version,species,transcript_id,three_frame_translation):
     '''
     :param version: Database version
     :param species: Full species name
@@ -131,7 +131,10 @@ def retrieve_data_from_biomart(version,species,transcript_id):
     biomart.add_attribute_to_xml('ensembl_transcript_id')
     biomart.add_attribute_to_xml("chromosome_name")
     biomart.add_attribute_to_xml("strand")
-    biomart.add_attribute_to_xml("coding")
+    if three_frame_translation=="Y":
+        biomart.add_attribute_to_xml("cdna")
+    else:
+        biomart.add_attribute_to_xml("coding")
     attributes=biomart.attributes(dataset)
 
     #execute query

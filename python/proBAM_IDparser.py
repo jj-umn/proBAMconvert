@@ -25,7 +25,7 @@ import sys
 # Find accession encryption pattern and database
 #
 
-def parseID(psm_hash,species,database,decoy_annotation,database_v):
+def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation):
     '''
     :param psm_hash: psm hash (see: proBAM_input.get_PSM_hash())
     :param species: species
@@ -99,14 +99,14 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v):
         # if database == ENSEMBL use correct function to retrieve anntotation information
         if database=="ENSEMBL":
             if find_result[1]=="ENSEMBL_TR":
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'transcript',database_v,species)
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'transcript',database_v,species,three_frame_translation)
             elif find_result[1]=="ENSEMBL_PR":
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'protein',database_v,species)
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'protein',database_v,species,three_frame_translation)
             elif find_result[1]=="UNIPROT":
                 conversion=_id_map_('UNIPROT/SWISSPROT','ENSEMBL',protein_ID,psm_hash,species,decoy_annotation,database_v)
                 psm_protein_id=conversion[0]
                 psm_hash=conversion[1]
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'transcript',database_v,species)
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'transcript',database_v,species,three_frame_translation)
             return [psm_hash,annotation]
         # raise error if database unsupported
         else:

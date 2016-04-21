@@ -55,7 +55,7 @@ def get_PSM_mztab(psm_file):
         for row in mztab:
             if row!="" and row!="\n" and len(row)!=0:
                 if row[0]=="PSM":
-                    print row[0]
+                    #print row[0]
                     if row[10] not in spectrum.keys():
                         spectrum[row[10]]=[]
                         spectrum[row[10]].append(row)

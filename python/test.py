@@ -61,7 +61,7 @@ transcript_ids=[]
 for row in query.execute():
     print row
 
-'''
+
 
 biomart=BioMart(host="plants.ensembl.org")
 test2=biomart.attributes('athaliana_eg_gene')
@@ -84,4 +84,11 @@ for row in temp_result:
     if len(items)==4:
         length=int(items[3])-int(items[1])+1
         result.append(items[0]+" "+str(length)+" "+items[3])
-#for row in result: print row
+'''
+
+from proBAM import map_peptide_to_protein_3frame
+
+map_peptide_to_protein_3frame(' I L L Q E I G T','ATTTAGGACCAATAAGTCTTAATTGGTTTGAAGAACTTTCTTCAGAAGCTCCACCCTATAATTCTGAACCTGCAGAAGAATC' \
+                               'TGAACATAAAAACAACAATTACGAACCAAACCTATTTAAAACTCCACAAAGGAAACCATCTTATAATCAGCTGGCTTCAACT' \
+                               'CCAATAATATTCAAAGAGCAAGGGCTGACTCTGCCGCTGTACCAATCTCCTGTAAAAGAATTAGATAAATTCAAATTAGAC' \
+                               'TTAG ',0,-1)

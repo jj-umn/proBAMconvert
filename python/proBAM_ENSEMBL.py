@@ -48,7 +48,7 @@ def get_Ensembl_prefix(species):
 #
 # Retrieve data from BioMart and store in hashes
 #
-def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species):
+def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species,three_frame_translation):
     '''
     :param psm_protein_id: list of protein IDs (untagged)
     :param mode: transcript or protein mode
@@ -96,12 +96,12 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species):
         psm_protein_id[row[id]]={'transcript_id':row[0],'translation_id':row[1],
                                  'transcript_seq':'','protein_seq':'',
                                  'chr':'','strand':'','5UTR_offset':row[3],'start_exon_rank':row[4]}
-    return ensembl_construct_sequences(psm_protein_id,ensembl,transcript_ids,database_v,species)
+    return ensembl_construct_sequences(psm_protein_id,ensembl,transcript_ids,database_v,species,three_frame_translation)
 
 #
 # Retrieve DNA-sequence, Splice, construct protein sequence and store
 #
-def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species):
+def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species,three_frame_translation):
     '''
     :param psm_hash: dictionair with protein / ensembl information ( see prepareAnnotationENSEMBL)
     :param ensembl:ensembl genome
@@ -121,7 +121,7 @@ def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,speci
         stable_transcript_ids.append(psm_hash[key]['transcript_id'])
 
     # Retrieve cds,chr,transcript_id and strand from biomart
-    biomart_result=proBAM_biomart.retrieve_data_from_biomart(database_v,species,stable_transcript_ids)
+    biomart_result=proBAM_biomart.retrieve_data_from_biomart(database_v,species,stable_transcript_ids,three_frame_translation)
     for row in biomart_result:
         row=row.split("\t")
         try:
