@@ -236,6 +236,7 @@ def create_SQ_header(database_v,species):
     seq_region_table=ensembl.CoreDb.getTable('seq_region')
     select_obj=[seq_region_table.c.name,
                 seq_region_table.c.length,
+                coord_table.c.version,
                 ]
     from_obj=seq_region_table.join(coord_table,coord_table.c.coord_system_id==seq_region_table.c.coord_system_id)
 
@@ -244,6 +245,6 @@ def create_SQ_header(database_v,species):
 
     for row in query.execute():
         if '_' not in row[0]:
-            SQ_string= "@SQ\tSN:chr"+str(row[0])+"\tLN:"+str(row[1])
+            SQ_string= "@SQ\tSN:chr"+str(row[0])+"\tLN:"+str(row[1])+"\tAS:"+str(row[2])+"\tSP:"+str(species)
             SQ.append(SQ_string)
     return SQ

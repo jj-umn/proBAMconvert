@@ -35,7 +35,11 @@ def _get_ensembl_archive_(version,species):
         return 'plants.ensembl.org'
     else:
         d={}
-        d[83]="www.ensembl.org"
+        #TODO www.ensembl.org biomart is not working, fix this for later when it's back online
+        #d[86]="uswest.ensembl.org"
+        d[85]="jul2016.archive.ensembl.org"
+        d[84]="mar2016.archive.ensembl.org"
+        d[83]="dec2015.archive.ensembl.org"
         d[82]="sep2015.archive.ensembl.org"
         d[81]="jul2015.archive.ensembl.org"
         d[80]="may2015.archive.ensembl.org"
@@ -120,6 +124,7 @@ def retrieve_data_from_biomart(version,species,transcript_id,three_frame_transla
     #create connection
     tr_query=_id_in_xml_query_(transcript_id)
     version=_get_ensembl_archive_(version,species)
+
     dataset=_get_ensembl_dataset_(species)
     biomart = BioMart(host=version)
 

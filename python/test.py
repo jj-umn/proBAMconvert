@@ -17,7 +17,7 @@
 
 __author__ = 'vladie'
 
-from bioservices import BioMart
+from bioservices import *
 from cogent.core.genetic_code import DEFAULT as standard_code
 from cogent.db.ensembl import Genome,Species
 import sqlalchemy as sql
@@ -84,7 +84,7 @@ for row in temp_result:
     if len(items)==4:
         length=int(items[3])-int(items[1])+1
         result.append(items[0]+" "+str(length)+" "+items[3])
-'''
+
 
 from proBAM import map_peptide_to_protein_3frame
 
@@ -92,3 +92,8 @@ map_peptide_to_protein_3frame(' I L L Q E I G T','ATTTAGGACCAATAAGTCTTAATTGGTTTG
                                'TGAACATAAAAACAACAATTACGAACCAAACCTATTTAAAACTCCACAAAGGAAACCATCTTATAATCAGCTGGCTTCAACT' \
                                'CCAATAATATTCAAAGAGCAAGGGCTGACTCTGCCGCTGTACCAATCTCCTGTAAAAGAATTAGATAAATTCAAATTAGAC' \
                                'TTAG ',0,-1)
+'''
+s = BioMart(host='www.ensembl.org')
+s.lookfor()
+
+print s.version("ensembl")

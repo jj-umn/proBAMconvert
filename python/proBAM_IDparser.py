@@ -69,6 +69,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
                 found=1
                 break
         count+=1
+    # print PID_list
     # raise error max amount of identifiers checked and nog identifiers identified
     if found==0:
         raise ValueError('Protein ID annotations not recognized\n'\

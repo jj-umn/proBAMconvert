@@ -17,7 +17,7 @@
 
 import proBAM_mzid
 import proBAM_mzTab
-from pyteomics import pepxml
+import proBAM_pepxml
 import re
 
 
@@ -38,17 +38,8 @@ def get_PSM_hash(psm_file,decoy_annotation):
 
     # catch pepxml file format and parse
     elif re.match('^.*\.(pepxml|pep.xml|xml)$',psm_file.lower())!=None:
-        PSM=[]
-        PEP=pepxml.read(psm_file,read_schema=False,iterative=True)
-        # count = 0
-        # parse tags out of protein IDs
-        for row in PEP:
-            #print row
-            #if count==5500:
-            #    break
-            PSM.append(row)
-            #count+=1
-        del PEP
+        PSM=proBAM_pepxml.get_PSM_pepxml(psm_file)
+
 
     # catch mztab file format and parse
     elif re.match('^.*\.(mztab)$',psm_file.lower())!=None:

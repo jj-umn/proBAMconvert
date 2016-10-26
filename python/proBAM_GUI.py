@@ -143,10 +143,11 @@ def _getDatabaseVersion_(tk):
     global database_v
     Label(text='Select database version',background="#f2f2f2",width=30,anchor=W).grid(row=5,column=0)
     database_v= StringVar(tk)
-    database_v.set('83')
+    database_v.set('86')
 
-    menu=OptionMenu(tk,database_v,'83','82','81','80','79','78','77','76','75','74','73','72','71','70','69','68','67','66','65'
-               ,'64','63','62','61','60','59','58','57','56','55','54')
+    menu=OptionMenu(tk,database_v,'85','84','83','82','81','80','79','78','77','76',
+                                    '75','74','73','72','71','70','69','68','67','66','65',
+                                    '64','63','62','61','60','59','58','57','56','55','54')
     menu.config(width=15,background="#d9d9d9")
     menu.grid(row=5,column=1)
 
@@ -299,6 +300,7 @@ def GUI():
     #
     # Window initiation
     #
+    #todo refresh window periodically (now its stuck between processes)
 
     root = Tk()
     root.title("proBAMconvert")
@@ -363,7 +365,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    os.chdir("/home/vladie/Desktop/Daria")
+    os.chdir("/home/vladie/Desktop/proBAMconvert")
     GUI()
 
 
