@@ -69,7 +69,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
                 found=1
                 break
         count+=1
-    # print PID_list
+    # print PID_list[0:100]
     # raise error max amount of identifiers checked and nog identifiers identified
     if found==0:
         raise ValueError('Protein ID annotations not recognized\n'\
@@ -127,7 +127,7 @@ def _find_annotation_(term_list,species):
     '''
     ensembl_prefix=proBAM_ENSEMBL.get_Ensembl_prefix(species)
     found=0
-    result=[0,0,0]
+    result=[0,0,0]    
     for pos in range(0,len(term_list)):
         if found==0:
             if ensembl_prefix[0][0] in term_list[pos]:

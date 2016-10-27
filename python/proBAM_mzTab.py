@@ -94,10 +94,45 @@ def _unimod_parser_():
         unimod_dict[(mod['record_id'])]=mod['avge_mass']
     return unimod_dict
 
+
 #
-# Parse modifications
+# Parse modifications (from UNIMOD/PSIMOD to neutral loss)
 #
 def _get_modifications_(peptide,mods,unimod,psimod):
+    '''
+    :param peptide: peptide sequence
+    :param mods: peptide modification in unimod or psimod format
+    :param unimod: unimod dictionairy
+    :param psimod: psimod dictionairy
+    :return: list of modification dictionairies for this peptide
+    '''
+    # seperate modification string into list of modifications
+    mod_list=mods.split(',')
+
+    # create variable to store results
+    modification=[]
+
+    #iterate over all modifications
+    for mod in mod_list:
+        if mod=="0" or mod.upper()=='NULL':
+            break
+
+        #partition unimod variable, separating position from unimod ID
+        mod_partitions=mod.split("-")
+
+        #calculate mass
+        db_type=mod_partitions[1].split(':')[0]
+        if db_type=="UNIMOD":
+            #look up avg mass in unimod dict and store modification array
+            modification.append({"position":mod_partitions[0],"mass":"UNIMOD:"+str(mod_partitions[1].split(':')[1])})
+        elif db_type=="MOD":
+            modification.append({"position":mod_partitions[0],"mass":"MOD:"+str(mod_partitions[1])})
+
+    return modification
+#
+# Parse modifications (from UNIMOD/PSIMOD to neutral loss)
+#
+def _get_modifications_neutral_(peptide,mods,unimod,psimod):
     '''
     :param peptide: peptide sequence
     :param mods: peptide modification in unimod or psimod format

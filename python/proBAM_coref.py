@@ -19,6 +19,8 @@ from itertools import imap
 import operator
 import re
 import proBAM_pepxml
+import proBAM_mzTab
+import proBAM_mzid
 from cogent.core.genetic_code import DEFAULT as standard_code
 #
 # reverse complements a DNA string
@@ -354,13 +356,13 @@ def create_XG(hamming_distance):
 def get_enzyme(psm_file):
     #catch mzid
     if re.match('^.*\.(mzid)$',psm_file.lower())!=None:
-        return 0
+        return proBAM_mzid.get_enzyme_mzid(psm_file)
     # catch pepxml file format and parse
     elif re.match('^.*\.(pepxml|pep.xml|xml)$',psm_file.lower())!=None:
         return proBAM_pepxml.get_enzyme_pepxml(psm_file)
     # catch mztab file format and parse
     elif re.match('^.*\.(mztab)$',psm_file.lower())!=None:
-        return 0
+        return proBAM_mzTab.get_enzyme_mztab(psm_file)
 
 #
 # get enzume specificity
@@ -368,22 +370,22 @@ def get_enzyme(psm_file):
 def get_enzyme_specificity(psm_file):
     # catch mzid
     if re.match('^.*\.(mzid)$', psm_file.lower()) != None:
-        return 0
+        return proBAM_mzid.get_enzyme_specificity_mzid(psm_file)
     # catch pepxml file format and parse
     elif re.match('^.*\.(pepxml|pep.xml|xml)$', psm_file.lower()) != None:
         return proBAM_pepxml.get_enzyme_specificity_pepxml(psm_file)
     # catch mztab file format and parse
     elif re.match('^.*\.(mztab)$', psm_file.lower()) != None:
-        return 0
+        return proBAM_mzTab.get_enzyme_specificity_mztab(psm_file)
 #
 # Extract comments containing experiment information for PSM file
 #
 def extract_comments(psm_file):
     if re.match('^.*\.(mzid)$', psm_file.lower()) != None:
-        return 0
+        return proBAM_mzid.extract_comments_from_mzid(psm_file)
     # catch pepxml file format and parse
     elif re.match('^.*\.(pepxml|pep.xml|xml)$', psm_file.lower()) != None:
         return proBAM_pepxml.extract_comments_from_pepxml(psm_file)
     # catch mztab file format and parse
     elif re.match('^.*\.(mztab)$', psm_file.lower()) != None:
-        return 0
+        return proBAM_mzTab.extract_comments_from_mztab(psm_file)
