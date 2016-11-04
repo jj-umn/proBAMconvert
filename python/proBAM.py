@@ -54,7 +54,7 @@ numpy
 matplotlib
 pyteomics
 '''
-'''
+
 #
 # Command line variable input
 #
@@ -77,6 +77,8 @@ def get_input_variables():
     global map_decoy
     global rm_duplicates
     global three_frame_translation
+    global command_line
+    global comments
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
@@ -89,6 +91,7 @@ def get_input_variables():
     species=""
     psm_file=""
     directory=""
+    comments=[]
     decoy_annotation=['REV_','DECOY_','_REVERSED']
     version='1.0'
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
@@ -104,7 +107,11 @@ def get_input_variables():
     #
 
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t",["name=","mismatches=","version=","database=","species=","file=","directory=","rm_duplicates=","map_decoy=","tri_frame_translation="])
+        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o",["name=","mismatches=","version=","database=",
+                                                                           "species=","file=","directory=",
+                                                                           "rm_duplicates=","map_decoy=",
+                                                                           "tri_frame_translation=","decoy_annotation=",
+                                                                           "sorting_order="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit()
@@ -139,6 +146,10 @@ def get_input_variables():
             map_decoy=a
         if o in ('-t','--three_frame_translation'):
             map_decoy=a
+        if o in ('-e','--decoy_annotation'):
+            decoy_annotation=a.split(',')
+        if o in ('o','--sorting_order'):
+            sorting_order=a
 
     #
     # Check for correct argument, output argument and parse
@@ -178,8 +189,11 @@ def get_input_variables():
     allowed_mismatches=mismatches
     database_v=version
 
-    command_line= python proBAM.py --name=,"mismatches=","version=","database=","species=","file=","directory=","rm_duplicates=","map_decoy=","tri_frame_translation="
-
+    command_line = "python proBAM.py --name " + str(name) + " --mismatches " + str(
+        allowed_mismatches) + " --version " + str(database_v) \
+                   + " --database " + str(database) + " --species " + str(species) + " --file " + str(psm_file) + \
+                   " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates) + \
+                   " --map_decoy " + str(map_decoy) + " --tri_frame_translation " + str(three_frame_translation )
 
     # ouput variables
     print(  "psm file:                                      " + str(file) +"\n"+
@@ -188,18 +202,18 @@ def get_input_variables():
             "database version:                              " + str(database_v) +"\n"+
             "species:                                       " + str(species) +"\n"+
             "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
-            "three_frame_translation:                         " + str(three_frame_translation))
-'''
+            "three_frame_translation:                       " + str(three_frame_translation))
+
 
 
 ###############################
 # NON COMMAND LINE ARGUMENTS  #
 # FOR TESTING PURPOSES        #
 ###############################
-
+'''
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PeptideShaker.mzid"
-species="homo_sapiens"
+psm_file="/home/vladie/Desktop/proBAMconvert/NTermCofr.pepXML"
+species="mus_musculus"
 database='ENSEMBL'
 database_v=85
 # TODO Let users specify used the decoy annotation
@@ -209,9 +223,9 @@ version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
 name='test'
-three_frame_translation='N'
+three_frame_translation='Y'
 map_decoy="N"
-rm_duplicates="N"
+rm_duplicates="Y"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
@@ -229,7 +243,7 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "map decoys:                                    " + str(map_decoy)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates))
 
-
+'''
 #######################
 ### GETTERS/SETTERS ###
 #######################
@@ -286,7 +300,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
     for psm in psm_hash:
         # convert unmapped PSMs with their own converter
         if 'search_hit' not in psm.keys():
-            nohit_PSM_to_SAM(psm,file,enzyme,enzyme_specificity)
+            continue
         else:
             for row in psm['search_hit']:
                 for p in range(0,len(row['proteins'])):
@@ -321,6 +335,10 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                         # Filter out PSM where transcript sequences were not found/ non-existent
                         if key not in transcript_hash.keys():
                             write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
+                        # transcript not on an canonical transcript
+                        # TODO do this nicer by fetching canonical chr
+                        elif len(transcript_hash[key]['chr']) > 4:
+                            write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity), file)
                         else:
                             if three_frame_translation=="Y":
                                 protein_hit=map_peptide_to_protein_3frame(row['peptide'],
@@ -390,12 +408,12 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #Mandatory proteomics specific columns added to the proBam format
                                     #
                                     #NH: number of genomic location the peptide mapping to
-                                    temp_result[11]='NH:i:'+str(len(row['proteins'])+len(phit)-1)
+                                    temp_result[11]='NH:i:*'
                                     #XO: uniqueness of peptide mapping
                                     #todo figure this one out
                                     temp_result[12]='XO:Z:*'
                                     #XL: number of peptides the spectrum mapping to
-                                    temp_result[13]='XL:i:'+str(len(psm['search_hit']))
+                                    temp_result[13]='XL:i:*'
                                     #XP; peptide sequence
                                     temp_result[14]='XP:Z:'+row['modified_peptide']
                                     #YP: protein accession ID from the original search
@@ -415,9 +433,9 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #YA: following 2AA:
                                     temp_result[21]="YA:Z:"+str(pre_post_aa[1])
                                     #XS: PSM score
-                                    temp_result[22]=create_XS(row['search_score'])
+                                    temp_result[22]="XS:f:"+str(row['search_score']['score'])
                                     #XQ: PSM-Qvalue
-                                    temp_result[23]='XQ:f:'+'NA'
+                                    temp_result[23]='XQ:f:'+str(row['search_score']['evalue'])
                                     #XC: Peptide charge
                                     temp_result[24]='XC:i:'+str(psm['assumed_charge'])
                                     #XA: Whether the peptide is well annotated
@@ -447,90 +465,6 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     else:
                                         write_psm(temp_result,file)
     file.close()
-
-#
-# Function to convert unmapped PSM to SAM
-#
-
-def nohit_PSM_to_SAM(psm,file,enzyme,enzyme_specificity):
-    '''
-    :param psm: psm file
-    :param file: output file
-    :return: converted psm to SAM if no hits found
-    '''
-    temp_result=[None]*32
-    #
-    # Mandatory columns adapted from SAM/BAM format
-    #
-    #QNAME
-    temp_result[0]=psm['spectrum']
-    #FLAG
-    temp_result[1]='4'
-    #RNAME
-    temp_result[2]='*'
-    #POS
-    temp_result[3]=0
-    #MAPQ
-    temp_result[4]=255
-    #CIGAR
-    temp_result[5]='*'
-    #RNEXT
-    temp_result[6]='*'
-    #PNEXT
-    temp_result[7]=0
-    #TLEN
-    temp_result[8]=0
-    #SEQ
-    temp_result[9]='*'
-    #QUAL
-    temp_result[10]='*'
-    #
-    #Mandatory proteomics specific columns added to the proBam format
-    #
-    #NH: number of genomic location the peptide mapping to
-    temp_result[11]='NH:i:0'
-    #XO uniqueness of peptide mapping
-    temp_result[12]='XO:Z:*'
-    #XL: number of peptides the spectrum mapping to
-    temp_result[13]='XL:i:0'
-    #XP; peptide sequence
-    temp_result[14]='XP:Z:NA'
-    #YP: Protein accession ID from original search
-    temp_result[15]='YP:Z:*'
-    #XF : reading frame of the peptide
-    temp_result[16]='XF:i:*'
-    #XI : Peptide intensity
-    temp_result[17]='XI:Z:*'
-    #XB: mass error
-    temp_result[18]='XB:f:*'
-    #XR: reference peptide sequence
-    temp_result[19]='XR:Z:NA'
-    #YB: 2AA before
-    temp_result[20]='YB:Z:*'
-    #YA: 2AA after
-    temp_result[21]='YA:Z:*'
-    #XS: PSM score
-    temp_result[22]='XS:f:0'
-    #XQ: PSM-Qvalue
-    temp_result[23]='XQ:f:0'
-    #XC: Peptide charge
-    temp_result[24]='XC:i:0'
-    #XA: Whether the peptide is well annotated
-    temp_result[25]='XA:i:0'
-    #XM: Modification
-    temp_result[26]='XM:Z:NA'
-    #XN: number of mis-cleavages
-    temp_result[27]='XN:i:0'
-    #XT: non/semi/tryptic
-    temp_result[28]="XT:i:"+str(enzyme_specificity)
-    #XE: enzyme used
-    temp_result[29]="XE:i:"+str(enzyme)
-    #XG: Petide type
-    temp_result[30]="XG:Z:U"
-    #XU: URL
-    temp_result[31]="XU:Z:*"
-    write_psm(temp_result,file)
-
 
 #
 # Function to convert unannotated PSMs to SAM
@@ -581,7 +515,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #XO: uniqueness
     temp_result[12]='XO:Z:*'
     #XL: number of peptides the spectrum mapping to
-    temp_result[13]='XL:i:'+str(len(psm['search_hit']))
+    temp_result[13]='XL:i:*'
     #XP; peptide sequence
     temp_result[14]='XP:Z:'+row['modified_peptide']
     #YP: protein accession id
@@ -598,10 +532,10 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     temp_result[20]='YB:Z:*'
     #YA: 2 AA after
     temp_result[21]='YA:Z:*'
-    #XS: PSM score
-    temp_result[22]=create_XS(row['search_score'])
-    #XQ: PSM-Qvalue
-    temp_result[23]='XQ:f:0'
+    # XS: PSM score
+    temp_result[22] = "XS:f:" + str(row['search_score']['score'])
+    # XQ: PSM-Qvalue
+    temp_result[23] = 'XQ:f:' + str(row['search_score']['evalue'])
     #XC: Peptide charge
     temp_result[24]='XC:i:'+str(psm['assumed_charge'])
     #XA: Whether the peptide is well annotated
@@ -612,7 +546,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     if 'num_missed_cleavages' in row.keys():
         temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
     else:
-        temp_result[27]='XN:i:0'
+        temp_result[27]='XN:i:*'
     #XT: non/semi/tryptic
     temp_result[28]="XT:i:"+str(enzyme_specificity)
     #XE: enzyme
@@ -701,7 +635,7 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             # todo figure this one out
             temp_result[12] = 'XO:z:*'
             # XL: number of peptides the spectrum mapping to
-            temp_result[13] = 'XL:i:' + str(len(psm['search_hit']))
+            temp_result[13] = 'XL:i:*'
             # XP; peptide sequence
             temp_result[14] = 'XP:Z:' + row['modified_peptide']
             # YP: protein accession ID from the original search
@@ -720,10 +654,10 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             temp_result[20] = "YB:Z:" + str(pre_post_aa[0])
             # YA: following 2AA:
             temp_result[21] = "YA:Z:" + str(pre_post_aa[1])
-            #XS: PSM score
-            temp_result[22]=create_XS(row['search_score'])
-            #XQ: PSM-Qvalue
-            temp_result[23]='XQ:f:'+'NA'
+            # XS: PSM score
+            temp_result[22] = "XS:f:" + str(row['search_score']['score'])
+            # XQ: PSM-Qvalue
+            temp_result[23] = 'XQ:f:' + str(row['search_score']['evalue'])
             #XC: Peptide charge
             temp_result[24]='XC:i:'+str(psm['assumed_charge'])
             #XA: Whether the peptide is well annotated
@@ -734,7 +668,7 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             if 'num_missed_cleaveges' in row.keys():
                 temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
             else:
-                temp_result[27]='XN:i:0'
+                temp_result[27]='XN:i:*'
             #XT: non/semi/tryptic
             temp_result[28]="XT:i:"+str(enzyme_specificity)
             #XE enzyme
@@ -748,7 +682,7 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
 #
 # Create SAM header
 #
-def create_SAM_header(file,version,database,sorting_order,database_v,species,command_line,psm_file):
+def create_SAM_header(file,version,database,sorting_order,database_v,species,command_line,psm_file,comments):
     '''
     :param file: output file
     :param version: proBAMconvert version
@@ -766,11 +700,17 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
     header.append('@PG\tID:proBamPy\tVN:1.0\tCL:'+str(command_line))
     header.append('@GA\tAS:'+str(database)+'\tVN:'+str(database_v))
     # get comments and append comments to file
+    if comments!=[]:
+        for comment in comments:
+            comment=str(comment).rstrip()
+            comment=re.sub(r'(^[ \t]+|[ \t]+(?=:))', '', comment, flags=re.M)
+            header.append('@CO\t'+str(comment))
     comments=extract_comments(psm_file)
-    for comment in comments:
-        comment=str(comment).rstrip()
-        comment=re.sub(r'(^[ \t]+|[ \t]+(?=:))', '', comment, flags=re.M)
-        header.append('@CO\t'+str(comment))
+    if comments!=[]:
+        for comment in comments:
+            comment=str(comment).rstrip()
+            comment=re.sub(r'(^[ \t]+|[ \t]+(?=:))', '', comment, flags=re.M)
+            header.append('@CO\t'+str(comment))
     for row in header:
         file.write(row+'\n')
 
@@ -780,18 +720,72 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
 #
 def sam_2_bam(directory,name):
     '''
-    :param directory: working directory
-    :param name: file name
-    :return: bam file
+    :param directory:
+    :param name:
+    :return:
     '''
     infile = pysam.AlignmentFile((directory+name+'.sam'), "r")
     outfile = pysam.AlignmentFile((directory+name+'.bam'), "wb", template=infile)
     for s in infile:
         outfile.write(s)
+    # create EOF
+    bam=open((directory+name+'.bam'),'ab')
+    bam.write("\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BC" + \
+                "\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+    bam.close()
+
     pysam.sort((directory+name+'.bam'),"-o",(directory+name+'.sorted.bam'))
     pysam.index(directory+name+'.sorted.bam')
+#
+# function to calculate and adjust NH for every peptide
+#
 
+def compute_NH_XL(name):
+    sam_file=open(directory+name+'.sam','r')
+    original_file = sam_file.read()
+    nh_hash={}
+    xl_hash={}
+    for line in original_file.split("\n"):
+        if len(line)<1:
+            continue
+        elif line[0]=="@":
+            continue
+        else:
+            if line.split("\t")[0] in xl_hash:
+                if line.split("\t")[19] not in xl_hash[line.split("\t")[0]]:
+                    xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+            else:
+                xl_hash[line.split("\t")[0]]=[]
+                xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+            if line.split("\t")[5]=="*":
+                continue
+            else:
+                if nh_key_line(line) in nh_hash:
+                    nh_hash[nh_key_line(line)]+=1
+                else:
+                    nh_hash[nh_key_line(line)]=1
+    sam_file.close()
+    sam_file=open(directory+name+'.sam','w')
+    for line in original_file.split("\n"):
+        if len(line)<1:
+            continue
+        elif line[0]=="@":
+            sam_file.write(line)
+        elif line.split("\t")[5]=="*":
+            sam_file.write(line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]]))))
+        else:
+            line=line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]])))
+            line=line.replace("NH:i:*","NH:i:"+str(nh_hash[nh_key_line(line)]))
+            sam_file.write(line)
+        sam_file.write("\n")
 
+#
+# for a line creates a unique genomic location key for this peptide
+#
+def nh_key_line(line):
+    line=line.split("\t")
+    key=line[2]+"_"+line[3]+"_"+line[5]+"_"+line[19]
+    return key
 
 ####################
 ### MAIN PROGRAM ###
@@ -812,9 +806,10 @@ if __name__=='__main__':
     exon_hash=annotation[1]
 
     # convert to SAM
-    create_SAM_header(file,version,database,sorting_order,database_v,species,command_line,psm_file)
+    create_SAM_header(file,version,database,sorting_order,database_v,species,command_line,psm_file,comments)
     PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
             three_frame_translation,psm_file)
+    compute_NH_XL(name)
     sam_2_bam(directory,name)
 
 

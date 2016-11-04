@@ -33,16 +33,6 @@ def get_PSM_mztab(psm_file):
     unimod=_unimod_parser_()
     psimod=_psimod_xml_parser_()
     with open(psm_file,'rU') as csvfile:
-        # skip comments
-        for row in csvfile:
-            tag= row[0:3]
-            if tag=='COM' or tag=='MTD' or tag=="" or tag=="\n":
-                next(csvfile)
-            else:
-                break
-
-        #skip header
-        next(csvfile)
 
         #read mztab PSM rows
         mztab=csv.reader(csvfile,delimiter='\t')
@@ -52,8 +42,12 @@ def get_PSM_mztab(psm_file):
 
         #iterate over all iterations and bundle psm from same spectrum
         spectrum={}
+        column_id={}
         for row in mztab:
             if row!="" and row!="\n" and len(row)!=0:
+                if row[0]=="PSH":
+                    for pos in range(0,len(row)):
+                        column_id[row[pos]]=pos
                 if row[0]=="PSM":
                     #print row[0]
                     if row[10] not in spectrum.keys():
@@ -71,14 +65,29 @@ def get_PSM_mztab(psm_file):
                 temp_hash={"assumed_charge":0,"spectrum":key,"search_hit":[]}
             for psm in spectrum[key]:
                 proteins=[]
-                proteins.append({"protein":psm[3],'peptide_prev_aa':psm[15],"peptide_next_aa":psm[16]})
-                modifications=_get_modifications_(psm[1],psm[9],unimod,psimod)
-                temp_hash['search_hit'].append({"hit_rank":1,"modifications":modifications,
-                                                "modified_peptide":psm[1],"peptide":psm[1],
-                                                "search_score":{"XCorr":psm[8]},
-                                                "proteins":proteins,"num_missed_cleavages":"0"})
+                proteins.append({"protein":psm[column_id["accession"]],'peptide_prev_aa':psm[column_id["pre"]],
+                                 "peptide_next_aa":psm[column_id["post"]]})
+                modifications=_get_modifications_(psm[column_id["modifications"]])
+                modified_sequence=_get_modified_sequence_(psm[column_id["sequence"]],psm[column_id["modifications"]],
+                                                          unimod,psimod)
+                temp_hash['search_hit'].append({"hit_rank":"*","modifications":modifications,
+                                                "modified_peptide":modified_sequence,
+                                                "peptide":psm[column_id['sequence']],
+                                                "massdiff":_calc_massdiff_(psm[column_id['exp_mass_to_charge']],
+                                                                           psm[column_id['calc_mass_to_charge']]),
+                                                "search_score":{"score":psm[column_id['search_engine_score[1]']],
+                                                                "evalue":"*"},
+                                                "proteins":proteins,"num_missed_cleavages":"*"})
             psm_hash.append(temp_hash)
     return psm_hash
+#
+# calculates massdiff
+#
+def _calc_massdiff_(exp_mass,calc_mass):
+    if exp_mass=="" and calc_mass=="":
+        return "*"
+    else:
+        return float(exp_mass)-float(calc_mass)
 #
 # connect to unimod DB, parse and store in dict
 #
@@ -98,7 +107,7 @@ def _unimod_parser_():
 #
 # Parse modifications (from UNIMOD/PSIMOD to neutral loss)
 #
-def _get_modifications_(peptide,mods,unimod,psimod):
+def _get_modifications_(mods):
     '''
     :param peptide: peptide sequence
     :param mods: peptide modification in unimod or psimod format
@@ -129,6 +138,49 @@ def _get_modifications_(peptide,mods,unimod,psimod):
             modification.append({"position":mod_partitions[0],"mass":"MOD:"+str(mod_partitions[1])})
 
     return modification
+#
+# Parse modifications (from UNIMOD/PSIMOD to neutral loss)
+#
+def _get_modified_sequence_(peptide,mods,unimod,psimod):
+    '''
+    :param peptide: peptide sequence
+    :param mods: peptide modification in unimod or psimod format
+    :param unimod: unimod dictionairy
+    :param psimod: psimod dictionairy
+    :return: list of modification dictionairies for this peptide
+    '''
+    # seperate modification string into list of modifications
+    mod_list=mods.split(',')
+    mod_sequence=peptide
+
+    # create variable to store results
+    modification=[]
+
+    #iterate over all modifications
+    for mod in mod_list:
+        if mod=="0" or mod.upper()=='NULL':
+            break
+
+        #partition unimod variable, separating position from unimod ID
+        mod_partitions=mod.split("-")
+
+        #calculate mass
+        db_type=mod_partitions[1].split(':')[0]
+        if db_type=="UNIMOD":
+            #look up avg mass in unimod dict and store modification array
+            mass=unimod[int(mod_partitions[1].split(':')[1])]
+            modification.append([mod_partitions[0],mass])
+        elif db_type=="MOD":
+            mass=psimod[mod_partitions[1]]
+            modification.append([mod_partitions[0],mass])
+    modification=sorted(modification)
+    shift=0
+    for mod in modification:
+        pos=int(mod[0])+shift+1
+        mod_bracketed="["+str(mod[1])+"]"
+        mod_sequence=mod_sequence[:pos]+mod_bracketed+mod_sequence[pos:]
+        shift+=len(mod_bracketed)
+    return mod_sequence
 #
 # Parse modifications (from UNIMOD/PSIMOD to neutral loss)
 #
@@ -165,7 +217,29 @@ def _get_modifications_neutral_(peptide,mods,unimod,psimod):
             modification.append({"position":mod_partitions[0],"mass":mass})
 
     return modification
-
+#
+# extract comments from mzTAB
+#
+def extract_comments_from_mztab(psm_file):
+    f=open(psm_file,'r')
+    comments=[]
+    for line in f:
+        if line[0:3]=="COM" or line[0:3]=="MTD":
+            comments.append(line)
+        else:
+            return comments
+            break
+    return comments
+#
+# Extract enzyme specificity from mzTab
+#
+def get_enzyme_specificity_mztab(psm_file):
+    return 3
+#
+# Extract enzyme specificity from mzTab
+#
+def get_enzyme_mztab(psm_file):
+    return "*"
 #
 # Connect to psimod, parse IDs and store in dict
 #
@@ -191,3 +265,4 @@ def _psimod_xml_parser_():
                     psimod[id]=avg_diff_mass[0]
     return psimod
 
+#get_PSM_mztab("/home/vladie/Desktop/proBAMconvert/HCT116_NtermCofr.mztab")

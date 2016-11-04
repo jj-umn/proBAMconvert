@@ -51,7 +51,8 @@ def get_PSM_mzid(psm_file):
 
                 temp_hash['search_hit'].append({"hit_rank":psm['rank'],"modifications":modifications,
                                                 "modified_peptide":mod_peptide,"peptide":psm['peptide_ref'],
-                                                "search_score":score,"proteins":proteins,"num_missed_cleavages":"0",
+                                                "search_score":{"score":_get_score_(psm),"evalue":_get_evalue_(psm)},
+                                                "proteins":proteins,"num_missed_cleavages":"0",
                                                 "massdiff":massdiff})
             psm_hash.append(temp_hash)
     return psm_hash
@@ -84,15 +85,32 @@ def _get_score_(psm):
     """
     hit=0
     hit_key=''
+    score={}
     #print psm.keys()
     for key in psm.keys():
-        if "xcorr" in key.lower() or 'expectation' in key.lower():
+        if "score" in key.lower():
             hit=1
             hit_key=key
     if hit==1:
-        return {"XCorr":psm[hit_key]}
+        return psm[hit_key]
     else:
-        return {"XCorr":0}
+        return "*"
+
+def _get_evalue_(psm):
+
+    hit=0
+    hit_key=''
+    score={}
+    #print psm.keys()
+    for key in psm.keys():
+        if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
+        or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower():
+            hit=1
+            hit_key=key
+    if hit==1:
+        return psm[hit_key]
+    else:
+        return "*"
 
 def _get_mod_peptide_sequence_(sequence,modification):
     '''
@@ -146,7 +164,7 @@ def get_enzyme_mzid(psm_file):
         return 8
     elif fnmatch(line, '*pepsina*'):
         return 9
-    elif fnmatch(line, '*trypchymo*'):
+    elif fnmatch(line, '*chymotrypsin*'):
         return 10
     elif fnmatch(line, '*noenzyme*'):
         return 0
@@ -192,6 +210,7 @@ def extract_comments_from_mzid(psm_file):
         comments.append(comment)
     return comments
 
+#get_PSM_mzid("/home/vladie/Desktop/proBAMconvert/PeptideShaker.mzid")
 # extract_comments_from_mzid("/home/vladie/Desktop/proBAMconvert/Mudpit.mzid")
 #get_PSM_mzid("/home/vladie/Desktop/mESC_ignolia/NtermCofr/NtermCofr.mzid")
 #get_PSM_mzid("/home/vladie/Desktop/mESC_ignolia/NtermCofr/NtermCofr2.mzid")

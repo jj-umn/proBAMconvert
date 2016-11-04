@@ -204,7 +204,7 @@ def map_peptide_to_protein_3frame(peptide_seq,transcript_seq,allowed_mismatches,
     '''
     size_adjust=-1    # adjust size of transcript for starting at +1/+2frame
     hits=[]
-    pre_post_aa=[]
+    pre_post_aa=['','']
     pep_length=len(peptide_seq)
     frame=[0]*3
     frame[0]=standard_code.translate(transcript_seq)
@@ -224,6 +224,8 @@ def map_peptide_to_protein_3frame(peptide_seq,transcript_seq,allowed_mismatches,
                     pre_post_aa[0] = f[(i - 2):i]
                 else:
                     pre_post_aa[0] = "*"
+
+
                 # compute 2 folowwing AA
                 if (i + 1) == (len(f) - 1):
                     pre_post_aa[1] = f[pep_length + i]
@@ -321,20 +323,6 @@ def create_XA(mismatch):
     else:
         XA+='1'
     return XA
-#
-# Function to determine PSM-score and create XS string
-#
-def create_XS(score):
-    '''
-    :param score: psm score
-    :return: xcorr score ( if existing)
-    '''
-    XS='XS:f:'
-    if 'xcorr' in score.keys():
-        XS+=str(score['xcorr'])
-    else:
-        XS+='NA'
-    return XS
 #
 # Function to analyze peptide type and create XG string
 #

@@ -28,6 +28,7 @@ import proBAM
 import proBAM_input
 import proBAM_IDparser
 from functools import partial
+import webbrowser
 
 #import needed for stand-alone executable
 import proBAM_mzTab
@@ -143,12 +144,12 @@ def _getDatabaseVersion_(tk):
     global database_v
     Label(text='Select database version',background="#f2f2f2",width=30,anchor=W).grid(row=5,column=0)
     database_v= StringVar(tk)
-    database_v.set('86')
+    database_v.set('85')
 
     menu=OptionMenu(tk,database_v,'85','84','83','82','81','80','79','78','77','76',
                                     '75','74','73','72','71','70','69','68','67','66','65',
                                     '64','63','62','61','60','59','58','57','56','55','54')
-    menu.config(width=15,background="#d9d9d9")
+    menu.config(width=15,background="#f2f2f2")
     menu.grid(row=5,column=1)
 
 def _getMapDecoy_(tk):
@@ -204,11 +205,21 @@ def _getAllowedMismatches_(tk):
     menu=OptionMenu(tk,allowed_mismatches,'0','1','2','3','4','5')
     menu.config(width=15)
     menu.grid(row=9,column=1)
+#
+# Center the toplevel widget
+#
+def center(toplevel):
+    toplevel.update_idletasks()
+    w = toplevel.winfo_screenwidth()
+    h = toplevel.winfo_screenheight()
+    size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
+    x = w/2 - size[0]/2
+    y = h/2 - size[1]/2
+    toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
 
 #
 # Global variable declaration
 #
-
 def _get_global_arguments_():
     '''
     :return: global variables
@@ -218,11 +229,96 @@ def _get_global_arguments_():
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     global sorting_order
     global psm_file
+    global comments
 
+    comments=[]
     decoy_annotation=['REV_','DECOY_','_REVERSED']
     version='1.0'
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
+
+def _advanced_settings_(tk):
+    global advanced_settings
+    execute_open_advanced_settings = partial(execute_proBAM, tk)
+    advanced_settings=Button(text='Advanced Settings',fg="black",command=_open_advanced_settings_,width=30,height=1,
+                             compound=LEFT,padx=0)
+    advanced_settings.grid(row=10,column=0)
+
+def _manual_(tk):
+
+    advanced_settings=Button(text='Manual',fg="black",command=_open_manual_,width=30,height=1,
+                             compound=LEFT,padx=0)
+    advanced_settings.grid(row=10,column=1)
+def _open_manual_():
+    import webbrowser
+    url="http://probam.biobix.be/manual"
+    webbrowser.open(url, new=0, autoraise=True)
+
+def _sortingOrder_(tk):
+    '''
+    :param tk: window
+    :return: selected max mismatches
+    '''
+    global new_sorting_order
+    Label(tk,text='sorting order',background="#f2f2f2",width=30,anchor=W).grid(row=0,column=0)
+    new_sorting_order= StringVar(tk)
+    new_sorting_order.set('unknown')
+
+    menu=OptionMenu(tk,new_sorting_order,'unknown','unsorted', 'queryname','coordinate')
+    menu.config(width=15)
+    menu.grid(row=0,column=1)
+
+def _decoyAnnotation_(tk):
+    global new_decoy_annotation
+    Label(tk, text='decoy annotation(s)', background="#f2f2f2", width=30, anchor=W).grid(row=1, column=0)
+    new_decoy_annotation= StringVar(tk)
+    entry=Entry(tk, textvariable=new_decoy_annotation)
+    new_decoy_annotation.set('REV_,DECOY_,_REVERSED')
+    entry.grid(row=1,column=1)
+
+def _comments_(tk):
+    global new_comments
+    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=2,column=0)
+    new_comments = StringVar(tk)
+    text=Text(tk)
+    text.config(background="white",height=5,width=60)
+    text.grid(row=3,columnspan=2)
+
+def _save_and_exit_(top):
+    global sorting_order
+    global decoy_annotation
+    global comments
+    if new_sorting_order.get()!='':
+        sorting_order=new_sorting_order.get()
+    if new_decoy_annotation.get() != '':
+        decoy_annotation=new_decoy_annotation.get().split(',')
+    if new_comments.get()!='':
+        comments=new_comments.get().split("\n")
+    top.destroy()
+
+def _open_advanced_settings_():
+
+    #create Toplevel window
+    top = Toplevel()
+    center(top)
+    top.title("Advanced Settings")
+    top.configure(background="#f2f2f2", borderwidth=20)
+    top.grid()
+
+    # create widgets
+    _sortingOrder_(top)
+    _decoyAnnotation_(top)
+    _comments_(top)
+
+    # create partial save and exit for tk
+    save_and_exit_argumented = partial(_save_and_exit_, top)
+
+    save_and_exit_button=Button(top,text='Save & Exit',fg="black",command=save_and_exit_argumented,width=20,height=2,borderwidth=3)
+    save_and_exit_button.grid(row=8,columnspan=2,pady=10)
+
+    top.geometry("500x500")
+
+
 #
 # Print selected variables to log
 #
@@ -252,37 +348,60 @@ def execute_proBAM(root):
     '''
     root.config(cursor="watch")
     root.update()
-    start_time = time.time()                                 # start timing function
 
+    start_time = time.time()                                # start timing function
+
+    Label(text='console:', pady=5, width=70, background="#f2f2f2").grid(row=12, columnspan=2)
+    std_text = ScrolledText.ScrolledText(root,height=20)
+    std_text.grid(row=15,columnspan=2)
+
+    sys.stdout = Std_redirector(std_text)
+    sys.stderr = Std_redirector(std_text)
+    sys.stdin  = Std_redirector(std_text)
+
+    root.update()
     # get and print arguments
-    _get_global_arguments_()
-    _print_arguments_()
-    print '***************************************************************************'
+    try:
+        _print_arguments_()
+        command_line = "python proBAM.py --name " + str(name) + " --mismatches " + str(
+            allowed_mismatches) + " --version " + str(database_v) \
+                       + " --database " + str(database) + " --species " + str(species) + " --file " + str(psm_file) + \
+                       " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates) + \
+                       " --map_decoy " + str(map_decoy) + " --tri_frame_translation " + str(three_frame_translation)
+        print '***************************************************************************'
 
-    # create connection to SAM file
-    file=proBAM.open_sam_file(directory,name.get())
+        # create connection to SAM file
+        file=proBAM.open_sam_file(directory,name.get())
 
-    # hash PSM_DATA and define variables
-    psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
+        # hash PSM_DATA and define variables
+        psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
 
-    parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
-                                       database.get().upper(),decoy_annotation,int(database_v.get()),
-                                        three_frame_translation.get())
-    annotation=parse_results[1]
-    psm_hash=parse_results[0]
-    transcript_hash=annotation[0]
-    exon_hash=annotation[1]
+        parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
+                                           database.get().upper(),decoy_annotation,int(database_v.get()),
+                                            three_frame_translation.get())
+        annotation=parse_results[1]
+        psm_hash=parse_results[0]
+        transcript_hash=annotation[0]
+        exon_hash=annotation[1]
 
-    # convert to SAM
-    proBAM.create_SAM_header(file,version,database.get().upper(),sorting_order,
-                             int(database_v.get()),species.get().replace(' ','_'))
-    proBAM.PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,int(allowed_mismatches.get()),
-                   file,map_decoy.get(),rm_duplicates.get(),three_frame_translation.get())
-    proBAM.sam_2_bam(directory,name.get())
+        # convert to SAM
+        proBAM.create_SAM_header(file,version,database.get().upper(),sorting_order,
+                                 int(database_v.get()),species.get().replace(' ','_'),command_line,psm_file,comments)
+        proBAM.PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,int(allowed_mismatches.get()),
+                       file,map_decoy.get(),rm_duplicates.get(),three_frame_translation.get(),psm_file)
+        proBAM.compute_NH_XL(name.get())
+        proBAM.sam_2_bam(directory,name.get())
 
-    print("proBAM conversion succesful")
-    print("%f seconds" % (time.time() - start_time))         # output script run time
-    root.config(cursor="")
+        root.config(cursor="")
+        print("proBAM conversion succesful")
+        print("%f seconds" % (time.time() - start_time))         # output script run time
+    except Exception,e:
+        print "ERROR:"+str(e)+"\n" \
+              "Please check if all parameters were supplied correctly, if the error keeps occuring contact " \
+              "the developers at \"https://github.com/Biobix/proBAMconvert/issues\" " \
+              "and provide the file to be processed along with the following error message:"
+        print e
+        root.config(cursor="")
 #
 # get path of script
 #
@@ -294,17 +413,14 @@ def getScriptPath():
 #
 
 def GUI():
-    '''
-    :return:
-    '''
     #
     # Window initiation
     #
     #todo refresh window periodically (now its stuck between processes)
-
     root = Tk()
+    center(root)
     root.title("proBAMconvert")
-    root.geometry("620x900")
+    root.geometry("620x725")
     root.configure(background="#f2f2f2",borderwidth=20)
     logo=PhotoImage(file=getScriptPath()+'/'+"proBAMconvert_logo.gif")
     Label(root, image=logo, background="#f2f2f2").grid(row=15,columnspan=2)
@@ -313,22 +429,11 @@ def GUI():
     import tkFont
     default_font = tkFont.nametofont("TkDefaultFont")
     default_font.configure(size=9,weight=tkFont.BOLD,family="MS Free Sans")
-
-
-    #
-    # Rederict standart output to console
-    #
-
-    Label(text='Console:',pady=5,width=70,background="#f2f2f2").grid(row=12,columnspan=2)
-    global std_label
     std_frame=Frame().grid(row=13,columnspan=2)
 
-    std_text = ScrolledText.ScrolledText(std_frame,height=20)
-    std_text.grid(row=14,columnspan=2)
-
-    sys.stdout = Std_redirector(std_text)
-    sys.stderr = Std_redirector(std_text)
-    sys.stdin  = Std_redirector(std_text)
+    # get scrolled text
+    Label(text='', pady=5, width=70, background="#f2f2f2").grid(row=12, columnspan=2)
+    global std_label
 
     #
     # Create grid for placement
@@ -339,8 +444,8 @@ def GUI():
     # Button and utility assignment
     #
 
-    Button(text='Choose file',command=_openFile_,fg='blue',width=30,anchor=W,justify=CENTER).grid(row=0,column=0)
-    Button(text='working directory',command=_getDirectroy_,fg='blue',width=30,anchor=W,
+    Button(text='Choose file',command=_openFile_,fg='#0099cc',width=30,anchor=W,justify=CENTER).grid(row=0,column=0)
+    Button(text='working directory',command=_getDirectroy_,fg='#0099cc',width=30,anchor=W,
            justify=CENTER).grid(row=1,column=0)
     _getProjectName_(root)
     species=_getSpecies_(root)
@@ -350,14 +455,14 @@ def GUI():
     _getRMDuplicates_(root)
     _get3frame_(root)
     _getAllowedMismatches_(root)
+    _advanced_settings_(root)
+    _manual_(root)
     execute_proBAM_argumented=partial(execute_proBAM,root)
     global proBam_button
-    proBam_button=Button(text='Convert',fg="blue",command=execute_proBAM_argumented,width=20,height=2,borderwidth=3)
-    proBam_button.grid(row=10,columnspan=2,pady=10)
+    proBam_button=Button(text='Convert',fg="#0099cc",command=execute_proBAM_argumented,width=20,height=2,borderwidth=3)
+    proBam_button.grid(row=11,columnspan=2,pady=10)
     root.update_idletasks()
     root.mainloop()
-
-
 
 ####################
 ### MAIN PROGRAM ###
@@ -366,6 +471,7 @@ def GUI():
 if __name__=='__main__':
     #start GUI
     os.chdir("/home/vladie/Desktop/proBAMconvert")
+    _get_global_arguments_()
     GUI()
 
 

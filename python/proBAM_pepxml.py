@@ -25,7 +25,12 @@ def get_PSM_pepxml(psm_file):
     # count = 0
     # parse tags out of protein IDs
     for row in PEP:
-        # print row
+        # adjust search scores
+        if 'search_hit' in row.keys():
+            for search_hit in row['search_hit']:
+                search_hit['search_score']={'score':_get_score_(search_hit['search_score']),
+                                                        'evalue':_get_evalue_(search_hit['search_score'])}
+
         # if count==5500:
         #    break
         PSM.append(row)
@@ -121,3 +126,36 @@ def extract_comments_from_pepxml(psm_file):
                 line=f.readline()
             return comments
     return comments
+
+def _get_score_(search_score):
+
+    hit = 0
+    hit_key = ''
+    score = {}
+    # print psm.keys()
+    for key in search_score:
+        if "score" in key.lower():
+            hit = 1
+            hit_key = key
+    if hit == 1:
+        return  search_score[hit_key]
+    else:
+        return "*"
+
+def _get_evalue_(search_score):
+
+    hit = 0
+    hit_key = ''
+    score = {}
+    # print psm.keys()
+    for key in search_score.keys():
+        if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
+                or "e_value" in key.lower().replace("-", "_") or 'evalue' in key.lower():
+            hit = 1
+            hit_key = key
+    if hit == 1:
+        return search_score[hit_key]
+    else:
+        return "*"
+
+#get_PSM_pepxml("/home/vladie/Desktop/proBAMconvert/NTermCofr.pepXML")
