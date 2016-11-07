@@ -170,9 +170,9 @@ def _update_protein_accession_(accession,decoy_annotation,hit):
     if "_" in accession:
         if decoy==1:
             if "_REVERSED" in accession:
-                accession="DECOY_"+accession.split('_')[hit]
+                accession="DECOY_"+accession.split('_')[0]
             else:
-                accession="DECOY_"+accession.split('_')[hit+1]
+                accession="DECOY_"+accession.split('_')[1]
         else:
             accession=accession.split('_')[hit]
     return accession

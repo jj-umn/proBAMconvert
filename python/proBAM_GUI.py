@@ -27,6 +27,7 @@ import time
 import proBAM
 import proBAM_input
 import proBAM_IDparser
+import proBAM_proBED
 from functools import partial
 import webbrowser
 
@@ -230,12 +231,14 @@ def _get_global_arguments_():
     global sorting_order
     global psm_file
     global comments
+    global probed
 
     comments=[]
     decoy_annotation=['REV_','DECOY_','_REVERSED']
     version='1.0'
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
+    probed='N'
 
 def _advanced_settings_(tk):
     global advanced_settings
@@ -268,6 +271,16 @@ def _sortingOrder_(tk):
     menu.config(width=15)
     menu.grid(row=0,column=1)
 
+def _convert_to_probed_(tk):
+    global new_probed
+    Label(tk, text='convert to proBED', background="#f2f2f2", width=30, anchor=W).grid(row=2, column=0)
+    new_probed = StringVar(tk)
+    new_probed.set('N')
+
+    menu = OptionMenu(tk, new_probed, 'Y')
+    menu.config(width=15)
+    menu.grid(row=2, column=1)
+
 def _decoyAnnotation_(tk):
     global new_decoy_annotation
     Label(tk, text='decoy annotation(s)', background="#f2f2f2", width=30, anchor=W).grid(row=1, column=0)
@@ -278,16 +291,19 @@ def _decoyAnnotation_(tk):
 
 def _comments_(tk):
     global new_comments
-    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=2,column=0)
+    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=3,column=0)
     new_comments = StringVar(tk)
     text=Text(tk)
     text.config(background="white",height=5,width=60)
-    text.grid(row=3,columnspan=2)
+    text.grid(row=4,columnspan=2)
 
 def _save_and_exit_(top):
     global sorting_order
     global decoy_annotation
     global comments
+    global probed
+    if new_probed.get()=='Y':
+        probed='Y'
     if new_sorting_order.get()!='':
         sorting_order=new_sorting_order.get()
     if new_decoy_annotation.get() != '':
@@ -309,6 +325,7 @@ def _open_advanced_settings_():
     _sortingOrder_(top)
     _decoyAnnotation_(top)
     _comments_(top)
+    _convert_to_probed_(top)
 
     # create partial save and exit for tk
     save_and_exit_argumented = partial(_save_and_exit_, top)
@@ -331,12 +348,13 @@ def _print_arguments_():
     print 'database version:       '+str(int(database_v.get()))
     print 'decoy annotation:       '+str(decoy_annotation)
     print 'allowed mismatches:     '+str(int(allowed_mismatches.get()))
-    print 'proBAM convert version: '+str(version)
+    print 'proBAMconvert version: '+str(version)
     print 'sorting order:          '+sorting_order
     print 'project name:           '+str(name.get())
     print 'map decoys:             '+map_decoy.get()
     print 'remove duplicate PSMs:  '+rm_duplicates.get()
     print '3-frame translation:    '+three_frame_translation.get()
+    print 'convert to proBED       '+probed
 
 #
 # Execute proBAMconvert
@@ -385,12 +403,21 @@ def execute_proBAM(root):
         exon_hash=annotation[1]
 
         # convert to SAM
-        proBAM.create_SAM_header(file,version,database.get().upper(),sorting_order,
-                                 int(database_v.get()),species.get().replace(' ','_'),command_line,psm_file,comments)
-        proBAM.PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,int(allowed_mismatches.get()),
-                       file,map_decoy.get(),rm_duplicates.get(),three_frame_translation.get(),psm_file)
-        proBAM.compute_NH_XL(name.get())
-        proBAM.sam_2_bam(directory,name.get())
+        if probed=='N':
+            file = proBAM.open_sam_file(directory, name)
+            proBAM.create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file,
+                              comments)
+            proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches, file, map_decoy,
+                    rm_duplicates,
+                    three_frame_translation, psm_file)
+            proBAM.compute_NH_XL(name)
+        else:
+            file = proBAM_proBED.open_bed_file(directory, name)
+            proBAM_proBED.create_BED_header(file, version, database, sorting_order, database_v, species, command_line,
+                                            psm_file, comments)
+            proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches, file,
+                                  map_decoy,
+                                  rm_duplicates, three_frame_translation, psm_file)
 
         root.config(cursor="")
         print("proBAM conversion succesful")

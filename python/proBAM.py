@@ -31,6 +31,7 @@ import proBAM_ENSEMBL
 import sys
 import getopt
 import os
+import proBAM_proBED
 import proBAM_IDparser
 import proBAM_pepxml
 from cogent.core.genetic_code import DEFAULT as standard_code
@@ -54,7 +55,7 @@ numpy
 matplotlib
 pyteomics
 '''
-
+'''
 #
 # Command line variable input
 #
@@ -79,6 +80,7 @@ def get_input_variables():
     global three_frame_translation
     global command_line
     global comments
+    global probed
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
@@ -99,6 +101,7 @@ def get_input_variables():
     map_decoy=""
     rm_duplicates=""
     three_frame_translation
+    probed="N"
 
 
     #
@@ -107,11 +110,11 @@ def get_input_variables():
     #
 
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o",["name=","mismatches=","version=","database=",
+        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o:i:",["name=","mismatches=","version=","database=",
                                                                            "species=","file=","directory=",
                                                                            "rm_duplicates=","map_decoy=",
                                                                            "tri_frame_translation=","decoy_annotation=",
-                                                                           "sorting_order="])
+                                                                           "sorting_order=","probed="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit()
@@ -150,6 +153,8 @@ def get_input_variables():
             decoy_annotation=a.split(',')
         if o in ('o','--sorting_order'):
             sorting_order=a
+        if o in ('i','--probed'):
+            probed=a
 
     #
     # Check for correct argument, output argument and parse
@@ -185,6 +190,8 @@ def get_input_variables():
         map_decoy="N"
     if three_frame_translation!="Y":
         three_frame_translation="N"
+    if probed!='Y':
+        probed='N'
 
     allowed_mismatches=mismatches
     database_v=version
@@ -205,15 +212,15 @@ def get_input_variables():
             "three_frame_translation:                       " + str(three_frame_translation))
 
 
-
+'''
 ###############################
 # NON COMMAND LINE ARGUMENTS  #
 # FOR TESTING PURPOSES        #
 ###############################
-'''
+
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/NTermCofr.pepXML"
-species="mus_musculus"
+psm_file="/home/vladie/Desktop/proBAMconvert/test.mzid"
+species="homo_sapiens"
 database='ENSEMBL'
 database_v=85
 # TODO Let users specify used the decoy annotation
@@ -226,6 +233,8 @@ name='test'
 three_frame_translation='Y'
 map_decoy="N"
 rm_duplicates="Y"
+probed='Y'
+comments=''
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
@@ -243,7 +252,7 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "map decoys:                                    " + str(map_decoy)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates))
 
-'''
+
 #######################
 ### GETTERS/SETTERS ###
 #######################
@@ -292,6 +301,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
     :param file: sam file
     :return: sam file IO
     '''
+    print "Commencing generation of SAM file"
     # psm_hash.reset()
     if rm_duplicates == "Y":
         dup = {}
@@ -312,7 +322,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                             key=row['proteins'][p]['protein'].upper().split(d)[1]
                             if key in transcript_hash.keys():
                                 temp_result= decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,
-                                                 map_decoy,enzyme,enzyme_specificity)
+                                                 map_decoy,enzyme,enzyme_specificity,three_frame_translation)
                                 if rm_duplicates=="Y":
                                     dup_key= str(temp_result[9])+"_"+str(temp_result[2])+"_"+str(temp_result[3])
                                     if dup_key not in dup.keys():
@@ -564,7 +574,8 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
 # Function to convert decoy PSM to SAM format
 #
 
-def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,map_decoy,enzyme,enzyme_specificity):
+def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,map_decoy,enzyme,enzyme_specificity,
+                     three_frame_translation):
     '''
     :param psm: psm dictionairy
     :param row: row where decoy found
@@ -605,7 +616,8 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
                                                      transcript_hash[key]['start_exon_rank'],
                                                      row['peptide'][::-1],
                                                      exon_hash[transcript_hash[key]['transcript_id']],
-                                                     transcript_hash[key]['chr'])
+                                                     transcript_hash[key]['chr'],
+                                                     three_frame_translation)
             #MAPQ
             temp_result[4]=255
             #CIGAR
@@ -691,6 +703,7 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
     :param database_v: database version
     :return:
     '''
+    print 'Creating SAM header'
     header=[]
     header.append('@HD\tVN:'+version+' SO:'+sorting_order)
     if database=="ENSEMBL":
@@ -724,6 +737,7 @@ def sam_2_bam(directory,name):
     :param name:
     :return:
     '''
+    print "Converting SAM to BAM"
     infile = pysam.AlignmentFile((directory+name+'.sam'), "r")
     outfile = pysam.AlignmentFile((directory+name+'.bam'), "wb", template=infile)
     for s in infile:
@@ -793,8 +807,8 @@ def nh_key_line(line):
 
 if __name__=='__main__':
     #get_input_variables()
-    start_time = time.time()                                 # start timing function
-    file=open_sam_file(directory,name)
+    start_time = time.time()
+    # start timing function
 
     # hash PSM_DATA and define variables
     psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
@@ -806,11 +820,19 @@ if __name__=='__main__':
     exon_hash=annotation[1]
 
     # convert to SAM
-    create_SAM_header(file,version,database,sorting_order,database_v,species,command_line,psm_file,comments)
-    PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
-            three_frame_translation,psm_file)
-    compute_NH_XL(name)
-    sam_2_bam(directory,name)
+    if probed=='N':
+        file = open_sam_file(directory, name)
+        create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
+        PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
+                three_frame_translation,psm_file)
+        compute_NH_XL(name)
+    # convert to BED
+    else:
+        file = proBAM_proBED.open_bed_file(directory, name)
+        proBAM_proBED.create_BED_header(file, database, database_v, command_line, psm_file, comments)
+        proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,
+                              rm_duplicates,three_frame_translation,psm_file)
+
 
 
     print("proBAM conversion succesful")

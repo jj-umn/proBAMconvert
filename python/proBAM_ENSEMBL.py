@@ -219,7 +219,6 @@ def create_SQ_header(database_v,species):
     :param database_v: database version
     :return: list of chromosomes with their size (from ENSEMBL)
     '''
-    print 'Creating SAM header'
     SQ=[]
     # create connection to ensembm database
         # create connection to ensembl database
