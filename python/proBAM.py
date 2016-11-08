@@ -85,7 +85,7 @@ def get_input_variables():
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
     ######################################
-
+'''
     name=""
     mismatches=0
     version=""
@@ -215,15 +215,15 @@ def get_input_variables():
             "proBED:                                        " + str(probed))
 
 
-
+'''
 ###############################
 # NON COMMAND LINE ARGUMENTS  #
 # FOR TESTING PURPOSES        #
 ###############################
-'''
+
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/test.mzid"
-species="homo_sapiens"
+psm_file="/home/vladie/Desktop/proBAMconvert/NTermCofr.pepXML"
+species="mus_musculus"
 database='ENSEMBL'
 database_v=85
 # TODO Let users specify used the decoy annotation
@@ -236,7 +236,7 @@ name='test'
 three_frame_translation='Y'
 map_decoy="N"
 rm_duplicates="Y"
-probed='Y'
+probed='N'
 comments=''
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
@@ -254,7 +254,7 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
         "map decoys:                                    " + str(map_decoy)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates))
-'''
+
 #######################
 ### GETTERS/SETTERS ###
 #######################
@@ -708,10 +708,10 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
     print 'Creating SAM header'
     header=[]
     header.append('@HD\tVN:'+version+' SO:'+sorting_order)
-    if database=="ENSEMBL":
+    if database.upper()=="ENSEMBL":
         SQ=proBAM_ENSEMBL.create_SQ_header(database_v,species)
-    for row in SQ:
-        header.append(row)
+        for row in SQ:
+            header.append(row)
     header.append('@PG\tID:proBamPy\tVN:1.0\tCL:'+str(command_line))
     header.append('@GA\tAS:'+str(database)+'\tVN:'+str(database_v))
     # get comments and append comments to file
@@ -756,7 +756,7 @@ def sam_2_bam(directory,name):
 # function to calculate and adjust NH for every peptide
 #
 
-def compute_NH_XL(name):
+def compute_NH_XL(directory,name):
     sam_file=open(directory+name+'.sam','r')
     original_file = sam_file.read()
     nh_hash={}
@@ -827,7 +827,8 @@ if __name__=='__main__':
         create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
         PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
                 three_frame_translation,psm_file)
-        compute_NH_XL(name)
+        compute_NH_XL(directory, name)
+        sam_2_bam(directory, name)
     # convert to BED
     else:
         file = proBAM_proBED.open_bed_file(directory, name)

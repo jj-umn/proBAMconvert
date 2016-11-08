@@ -348,7 +348,7 @@ def _print_arguments_():
     print 'decoy annotation:       '+str(decoy_annotation)
     print 'allowed mismatches:     '+str(int(allowed_mismatches.get()))
     print 'proBAMconvert version: '+str(version)
-    print 'sorting order:          '+sorting_order
+    print 'sorting order:          '+ sorting_order
     print 'project name:           '+str(name.get())
     print 'map decoys:             '+map_decoy.get()
     print 'remove duplicate PSMs:  '+rm_duplicates.get()
@@ -381,14 +381,12 @@ def execute_proBAM(root):
     try:
         _print_arguments_()
         command_line = "python proBAM.py --name " + str(name) + " --mismatches " + str(
-            allowed_mismatches) + " --version " + str(database_v) \
-                       + " --database " + str(database) + " --species " + str(species) + " --file " + str(psm_file) + \
-                       " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates) + \
+            allowed_mismatches) + " --version " + str(database_v.get()) \
+                       + " --database " + str(database.get().upper()) + " --species " + str(species.get()) + " --file " + str(psm_file) + \
+                       " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates.get()) + \
                        " --map_decoy " + str(map_decoy) + " --tri_frame_translation " + str(three_frame_translation)
         print '***************************************************************************'
 
-        # create connection to SAM file
-        file=proBAM.open_sam_file(directory,name.get())
 
         # hash PSM_DATA and define variables
         psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
@@ -403,16 +401,19 @@ def execute_proBAM(root):
 
         # convert to SAM
         if probed=='N':
-            file = proBAM.open_sam_file(directory, name)
-            proBAM.create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file,
+            file = proBAM.open_sam_file(directory, name.get())
+            proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
+                                     species.get(), command_line, psm_file,
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches, file, map_decoy,
                     rm_duplicates,
                     three_frame_translation, psm_file)
-            proBAM.compute_NH_XL(name)
+            proBAM.compute_NH_XL(directory, name.get())
+            proBAM.sam_2_bam(directory, name.get())
         else:
-            file = proBAM_proBED.open_bed_file(directory, name)
-            proBAM_proBED.create_BED_header(file, version, database, sorting_order, database_v, species, command_line,
+            file = proBAM_proBED.open_bed_file(directory, name.get())
+            proBAM_proBED.create_BED_header(file, version, database.get().upper(), sorting_order.get(), database_v.get(),
+                                            species.get(), command_line,
                                             psm_file, comments)
             proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches, file,
                                   map_decoy,
@@ -496,7 +497,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    #os.chdir("/home/vladie/Desktop/proBAMconvert")
+    os.chdir("/home/vladie/Desktop/proBAMconvert")
     _get_global_arguments_()
     GUI()
 
