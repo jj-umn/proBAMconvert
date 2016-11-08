@@ -86,8 +86,7 @@ def _openFile_():
     :return: return location of supplied psm file
     '''
     global psm_file
-    psm_file = askopenfilename( filetypes = (("All Files","*.*"),("mzIdentML","*.mzid"),("pepxml","*xml")),title=
-                            "Please specify file for proBAM conversion",)
+    psm_file = askopenfilename(title="Please specify file for proBAM conversion",)
     if len(psm_file)<20:
         Label(text=psm_file,background="#f2f2f2",width=25).grid(row=0,column=1)
     else:
@@ -497,7 +496,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    os.chdir("/home/vladie/Desktop/proBAMconvert")
+    #os.chdir("/home/vladie/Desktop/proBAMconvert")
     _get_global_arguments_()
     GUI()
 

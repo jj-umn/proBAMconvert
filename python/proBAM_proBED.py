@@ -82,14 +82,16 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 else:
                                     unique_name_generator["DECOY_"+key] = 0
                                 temp_result= decoy_PSM_to_BED(psm,row,key,transcript_hash,exon_hash,map_decoy,
-                                                              unique_name_generator,three_frame_translation,
+                                                              three_frame_translation,
                                                               unique_name_generator["DECOY_"+key],allowed_mismatches)
-                                if rm_duplicates=="Y":
-                                    dup_key= str(temp_result[9])+"_"+str(temp_result[2])+"_"+str(temp_result[3])
+
+                                if rm_duplicates=="Y" and temp_result!=False:
+                                    print temp_result
+                                    dup_key= str(temp_result[0])+"_"+str(temp_result[1])+"_"+str(temp_result[13])
                                     if dup_key not in dup.keys():
                                         dup[dup_key]=1
                                         _write_psm_(temp_result,file)
-                                else:
+                                elif temp_result!=False:
                                     _write_psm_(temp_result,file)
 
                     if decoy==0:
@@ -145,7 +147,7 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #chromStart
                                     temp_result[1]=genome_position
                                     #chromStop
-                                    temp_result[1] = _calculate_stop_(temp_result[1],CIGAR)
+                                    temp_result[2] = _calculate_stop_(temp_result[1],CIGAR)
                                     #unique protein accession
                                     temp_result[3]=str(key)+"_"+str(unique_name_generator[key])
                                     #score
@@ -162,11 +164,11 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #reserved
                                     temp_result[8]=0
                                     #blockcount
-                                    temp_result[9]=str(len(CIGAR.split('M')))
+                                    temp_result[9]=str(len(CIGAR.split('M'))-1)
                                     #list of black sizes
                                     temp_result[10]=_get_block_sizes_(CIGAR)
                                     #list of block starts
-                                    temp_result[11]=_get_block_starts_(temp_result[1],temp_result[10])
+                                    temp_result[11]=_get_block_starts_(temp_result[1],CIGAR)
                                     #
                                     #Mandatory proteomics specific columns added to the proBED format
                                     #
@@ -191,15 +193,18 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #calc-mass-to-charge
                                     temp_result[21]="."
                                     #rank
-                                    temp_result[22]=psm['hit_rank']
+                                    temp_result[22]=row['hit_rank']
                                     #dataset ID
                                     temp_result[23]=psm['spectrum']
                                     #url
                                     temp_result[24]="."
+                                    for i in range(0, len(temp_result)):
+                                        if temp_result[i] == '*' or temp_result[i] == []:
+                                            temp_result[i] == "."
                                     # remove duplicates if rm_duplicates=Y
                                     if rm_duplicates=="Y":
-                                        dup_key= str(temp_result[9])+"_"+\
-                                                          str(temp_result[2])+"_"+str(temp_result[3])
+                                        dup_key= str(temp_result[0])+"_"+\
+                                                          str(temp_result[1])+"_"+str(temp_result[13])
                                         if dup_key not in dup.keys():
                                             dup[dup_key]=1
                                             _write_psm_(temp_result,file)
@@ -211,7 +216,8 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
 # Function to convert decoy PSM to SAM format
 #
 
-def decoy_PSM_to_BED(psm,row,key,transcript_hash,exon_hash,map_decoy,unique_name_generator,unique_nr,allowed_mismatches):
+def decoy_PSM_to_BED(psm, row, key, transcript_hash, exon_hash, map_decoy,three_frame_translation,
+                     unique_nr, allowed_mismatches):
     '''
     :param psm: psm dictionairy
     :param row: row where decoy found
@@ -252,7 +258,7 @@ def decoy_PSM_to_BED(psm,row,key,transcript_hash,exon_hash,map_decoy,unique_name
                                                      exon_hash[transcript_hash[key]['transcript_id']],
                                                      transcript_hash[key]['chr'])
             # chromStop
-            temp_result[1] = _calculate_stop_(temp_result[1], CIGAR)
+            temp_result[2] = _calculate_stop_(temp_result[1], CIGAR)
             # unique protein accession
             temp_result[3] = "DECOY_"+str(key) + "_" + str(unique_nr)
             # score
@@ -269,11 +275,11 @@ def decoy_PSM_to_BED(psm,row,key,transcript_hash,exon_hash,map_decoy,unique_name
             # reserved
             temp_result[8] = 0
             # blockcount
-            temp_result[9] = str(len(CIGAR.split('M')))
+            temp_result[9] = str(len(CIGAR.split('M'))-1)
             # list of black sizes
             temp_result[10] = _get_block_sizes_(CIGAR)
             # list of block starts
-            temp_result[11] = _get_block_starts_(temp_result[1], temp_result[10])
+            temp_result[11] = _get_block_starts_(temp_result[1], CIGAR)
             #
             # Mandatory proteomics specific columns added to the proBED format
             #
@@ -298,11 +304,14 @@ def decoy_PSM_to_BED(psm,row,key,transcript_hash,exon_hash,map_decoy,unique_name
             # calc-mass-to-charge
             temp_result[21] = "."
             # rank
-            temp_result[22] = psm['hit_rank']
+            temp_result[22] = row['hit_rank']
             # dataset ID
             temp_result[23] = psm['spectrum']
             # url
             temp_result[24] = "."
+            for i in range(0,len(temp_result)):
+                if temp_result[i]=='*' or temp_result[i]==[]:
+                    temp_result[i]=="."
             return temp_result
 #
 # calculate stop
@@ -343,7 +352,7 @@ def _get_block_starts_(pos,flag):
     start_sizes=str(pos)
     length=int(pos)
     number_parsing=''
-    if len(sizes)==1:
+    if len(sizes)<=2:
         return start_sizes
     else:
         for char in flag:

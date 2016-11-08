@@ -55,7 +55,7 @@ numpy
 matplotlib
 pyteomics
 '''
-'''
+
 #
 # Command line variable input
 #
@@ -209,15 +209,18 @@ def get_input_variables():
             "database version:                              " + str(database_v) +"\n"+
             "species:                                       " + str(species) +"\n"+
             "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
-            "three_frame_translation:                       " + str(three_frame_translation))
+            "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
+            "decoy annotations:                             " + str(decoy_annotation)+"\n"+
+            "sorting order:                                 " + str(sorting_order)+"\n"+
+            "proBED:                                        " + str(probed))
 
 
-'''
+
 ###############################
 # NON COMMAND LINE ARGUMENTS  #
 # FOR TESTING PURPOSES        #
 ###############################
-
+'''
 directory="/home/vladie/Desktop/proBAMconvert/output/"
 psm_file="/home/vladie/Desktop/proBAMconvert/test.mzid"
 species="homo_sapiens"
@@ -251,8 +254,7 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
         "map decoys:                                    " + str(map_decoy)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates))
-
-
+'''
 #######################
 ### GETTERS/SETTERS ###
 #######################
