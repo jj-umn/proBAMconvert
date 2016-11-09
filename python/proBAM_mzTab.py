@@ -48,21 +48,29 @@ def get_PSM_mztab(psm_file):
                 if row[0]=="PSH":
                     for pos in range(0,len(row)):
                         column_id[row[pos]]=pos
+                for key in column_id.keys():
+                    if "rank" in key.lower():
+                        column_id['rank']=column_id[key]
+                    if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
+                            or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
+                        column_id['fdr'] = column_id[key]
+
                 if row[0]=="PSM":
                     #print row[0]
-                    if row[10] not in spectrum.keys():
-                        spectrum[row[10]]=[]
-                        spectrum[row[10]].append(row)
+                    if row[column_id['PSM_ID']] not in spectrum.keys():
+                        spectrum[row[column_id['PSM_ID']]]=[]
+                        spectrum[row[column_id['PSM_ID']]].append(row)
                     else:
-                        spectrum[row[10]].append(row)
+                        spectrum[row[column_id['PSM_ID']]].append(row)
 
 
         #iterate over all spectrum to store in processable dictionairy
         for key in spectrum.keys():
-            if spectrum[key][0][12]!="":
-                temp_hash={"assumed_charge":spectrum[key][0][12],"spectrum":key,"search_hit":[]}
+            if 'charge' in column_id:
+                temp_hash={"assumed_charge":spectrum[key][0][column_id['charge']],"spectrum":key,"search_hit":[]}
             else:
                 temp_hash={"assumed_charge":0,"spectrum":key,"search_hit":[]}
+
             for psm in spectrum[key]:
                 proteins=[]
                 proteins.append({"protein":psm[column_id["accession"]],'peptide_prev_aa':psm[column_id["pre"]],
@@ -78,6 +86,10 @@ def get_PSM_mztab(psm_file):
                                                 "search_score":{"score":psm[column_id['search_engine_score[1]']],
                                                                 "evalue":"*"},
                                                 "proteins":proteins,"num_missed_cleavages":"*"})
+                if 'rank' in column_id.keys():
+                    temp_hash['search_hit']['hit_rank']=psm[column_id['rank']]
+                if 'fdr' in column_id.keys():
+                    temp_hash['search_hit']['search_score']['evalue']=psm[column_id['fdr']]
             psm_hash.append(temp_hash)
     return psm_hash
 #

@@ -48,7 +48,7 @@ def _write_psm_(temp_result,file):
 # Convert PSM to SAM
 #
 def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
-            three_frame_translation,psm_file):
+            three_frame_translation,psm_file,id_map):
     '''
     :param psm_hash: dictionairy of psm files
     :param transcript_hash: dictionairy of transcripts

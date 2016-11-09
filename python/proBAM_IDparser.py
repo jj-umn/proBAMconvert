@@ -20,12 +20,13 @@ import proBAM_ENSEMBL
 import proBAM_biomart
 import re
 import sys
+from fnmatch import fnmatch
 
 #
 # Find accession encryption pattern and database
 #
 
-def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation):
+def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation,pre_picked_annotation):
     '''
     :param psm_hash: psm hash (see: proBAM_input.get_PSM_hash())
     :param species: species
@@ -44,27 +45,27 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
     found=0
     count=0
     # set maximum amount of identifiers to be checked before giving up identifier identification
-    if len(PID_list)<100:
+    if len(PID_list)<1000:
         max=len(PID_list)
     else:
-        max=100
+        max=1000
     # parse | and _ out of identifier and put in a list of terms
     while found==0 and count<max:
         if "|" in PID_list[count]:
             decrypted_list=PID_list[count].split("|")
-            find_result=_find_annotation_(decrypted_list,species)
+            find_result=_find_annotation_(decrypted_list,species,pre_picked_annotation)
             if find_result[0]==1:
                 found=1
                 break
         elif "_" in PID_list[count]:
             decrypted_list=PID_list[count].split("_")
-            find_result=_find_annotation_(decrypted_list,species)
+            find_result=_find_annotation_(decrypted_list,species,pre_picked_annotation)
             if find_result[0]==1:
                 found=1
                 break
         else:
             decrypted_list=[PID_list[count]]
-            find_result=_find_annotation_(decrypted_list,species)
+            find_result=_find_annotation_(decrypted_list,species,pre_picked_annotation)
             if find_result[0]==1:
                 found=1
                 break
@@ -94,21 +95,29 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
                                 hit=1
                         if hit==0:
                             protein_ID.append(psm['proteins'][i]['protein'])
+
+
         #retain only unique IDs
         unique=set(protein_ID)
         protein_ID=list(unique)
         # if database == ENSEMBL use correct function to retrieve anntotation information
         if database=="ENSEMBL":
             if find_result[1]=="ENSEMBL_TR":
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'transcript',database_v,species,three_frame_translation)
+                conversion = _id_map_('ENSEMBL', 'ENSEMBL', protein_ID, psm_hash, species, decoy_annotation,database_v)
+                id_map = conversion[0]
+                psm_hash = conversion[1]
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(id_map.values(),'transcript',database_v,species,three_frame_translation)
             elif find_result[1]=="ENSEMBL_PR":
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(protein_ID,'protein',database_v,species,three_frame_translation)
+                conversion = _id_map_('ENSEMBL', 'ENSEMBL', protein_ID, psm_hash, species, decoy_annotation,database_v)
+                id_map = conversion[0]
+                psm_hash = conversion[1]
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(id_map.values(),'protein',database_v,species,three_frame_translation)
             elif find_result[1]=="UNIPROT":
                 conversion=_id_map_('UNIPROT/SWISSPROT','ENSEMBL',protein_ID,psm_hash,species,decoy_annotation,database_v)
-                psm_protein_id=conversion[0]
+                id_map=conversion[0]
                 psm_hash=conversion[1]
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(psm_protein_id,'transcript',database_v,species,three_frame_translation)
-            return [psm_hash,annotation]
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(id_map.values(),'transcript',database_v,species,three_frame_translation)
+            return [psm_hash,annotation,id_map]
         # raise error if database unsupported
         else:
             raise ValueError('Currently supported annotation databases: \n ENSEMBL')
@@ -119,7 +128,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
 # Find annotation in list of terms
 #
 
-def _find_annotation_(term_list,species):
+def _find_annotation_(term_list,species,pre_picked_annotation):
     '''
     :param term_list: list of terms of possible identifiers
     :param species: species
@@ -127,26 +136,28 @@ def _find_annotation_(term_list,species):
     '''
     ensembl_prefix=proBAM_ENSEMBL.get_Ensembl_prefix(species)
     found=0
-    result=[0,0,0]    
+    result=[0,0,0]
     for pos in range(0,len(term_list)):
         if found==0:
-            if ensembl_prefix[0][0] in term_list[pos]:
+            if ensembl_prefix[0][0] in term_list[pos] and \
+                    (pre_picked_annotation=="First" or pre_picked_annotation=="Ensembl_tr"):
                 print "Identified ENSEMBL transcript IDs"
                 result=[1,"ENSEMBL_TR",pos]
                 found=1
                 break
-            elif ensembl_prefix[0][1] in term_list[pos]:
+            elif ensembl_prefix[0][1] in term_list[pos] and \
+                (pre_picked_annotation == "First" or pre_picked_annotation == "Ensembl_pr"):
                 print "Identified ENSEMBL protein IDs"
                 result=[1,"ENSEMBL_PR",pos]
                 found=1
                 break
-            elif re.match("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}",term_list[pos]) \
+            elif (pre_picked_annotation=="First" or pre_picked_annotation=="UniProt"):
+                if re.match(".*[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}.*",term_list[pos]) \
                             is not None:
-                print " Identified UNIPROT/SWISSPROT IDs"
-                result=[1,"UNIPROT",pos]
-                found=1
-                break
-
+                    print " Identified UNIPROT/SWISSPROT IDs"
+                    result=[1,"UNIPROT",pos]
+                    found=1
+                    break
     return result
 
 
@@ -162,17 +173,25 @@ def _update_protein_accession_(accession,decoy_annotation,hit):
     :param hit: position of protein ID
     :return: protein ID
     '''
-    decoy=0
+    is_decoy=0
     if any(decoy in accession.upper() for decoy in decoy_annotation):
-        decoy=1
+        is_decoy=1
+    forward_decoys=[]
+    backward_decoys=[]
+    for decoy in decoy_annotation:
+        if fnmatch(decoy,"_*"):
+            backward_decoys.append(decoy.replace('_',''))
+        elif fnmatch(decoy,"*_"):
+            forward_decoys.append(decoy.replace('_',''))
     if '|' in accession:
         accession=accession.split('|')[hit]
     if "_" in accession:
-        if decoy==1:
-            if "_REVERSED" in accession:
-                accession="DECOY_"+accession.split('_')[0]
-            else:
-                accession="DECOY_"+accession.split('_')[1]
+        if is_decoy==1:
+            for i in range(0,len(accession.split('_'))):
+                if any(b_decoy in accession.split('_')[i] for b_decoy in backward_decoys):
+                    accession="DECOY_"+accession.split('_')[i-1]
+                elif any(f_decoy in accession[i].split('_') for f_decoy in forward_decoys):
+                    accession="DECOY_"+accession.split('_')[i+1]
         else:
             accession=accession.split('_')[hit]
     return accession
@@ -227,35 +246,25 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
     map={}
     if to_annotation=="ENSEMBL":
         if from_annotation=="UNIPROT/SWISSPROT":
+            temp_map={}
             mapped_id=proBAM_biomart.id_map_ensembl("uniprot_swissprot",database_v,species,psm_protein_id)
             for row in mapped_id:
                 row=row.split("\t")
                 if row[0]!="":
-                    if row[2] in map.keys():
-                        if map[row[2]][1]<row[1]:
-                            map[row[2]]=row
+                    if row[2] in temp_map.keys():
+                        if temp_map[row[2]][1]<row[1]:
+                            temp_map[row[2]]=row
                     else:
-                        map[row[2]]=row
+                        temp_map[row[2]]=row
+            for key in temp_map:
+                map[key]=temp_map[key][0]
 
-    for key in psm_hash:
-        if 'search_hit' in key.keys():
-            for psm in key['search_hit']:
-                for i in range (0,len(psm['proteins'])):
-                    hit=0
-                    for d in decoy_annotation:
-                        if d in psm['proteins'][i]['protein'].upper():
-                            ID=psm['proteins'][i]['protein'].upper().split(d)[1]
-                            if ID in map.keys():
-                                psm['proteins'][i]['protein']="DECOY_"+map[ID][0]
-                                new_psm_protein_id.append(map[ID][0])
-                            hit=1
-                    if hit==0:
-                        if psm['proteins'][i]['protein'] in map.keys():
-                            new_psm_protein_id.append(map[psm['proteins'][i]['protein']][0])
-                            psm['proteins'][i]['protein']=map[psm['proteins'][i]['protein']][0]
+        if from_annotation=="ENSEMBL":
+            for id in psm_protein_id:
+                map[id]=id.split('.')[0]
 
-    #retain only unique IDs
-    return [new_psm_protein_id,psm_hash]
+
+    return [map,psm_hash]
 
 #
 # When an ID maps to multiple transcript IDs, fetch the longest transcript

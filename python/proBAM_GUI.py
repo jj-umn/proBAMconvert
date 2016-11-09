@@ -157,11 +157,11 @@ def _getMapDecoy_(tk):
     :param tk: window
     :return: selected map decoy option
     '''
-    global map_decoy
+    global allow_decoys
     Label(text="Map Decoys",background="#f2f2f2",width=30,anchor=W).grid(row=6,column=0)
-    map_decoy=StringVar(tk)
-    map_decoy.set('N')
-    menu=OptionMenu(tk,map_decoy,'N','Y')
+    allow_decoys=StringVar(tk)
+    allow_decoys.set('N')
+    menu=OptionMenu(tk,allow_decoys,'N','Y')
     menu.config(width=15)
     menu.grid(row=6,column=1)
 
@@ -231,6 +231,7 @@ def _get_global_arguments_():
     global psm_file
     global comments
     global probed
+    global pre_picked_annotation
 
     comments=[]
     decoy_annotation=['REV_','DECOY_','_REVERSED']
@@ -238,6 +239,7 @@ def _get_global_arguments_():
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
     probed='N'
+    pre_picked_annotation="First"
 
 def _advanced_settings_(tk):
     global advanced_settings
@@ -290,17 +292,28 @@ def _decoyAnnotation_(tk):
 
 def _comments_(tk):
     global new_comments
-    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=3,column=0)
+    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=4,column=0)
     new_comments = StringVar(tk)
     text=Text(tk)
     text.config(background="white",height=5,width=60)
-    text.grid(row=4,columnspan=2)
+    text.grid(row=5,columnspan=2)
+
+def _pre_picked_annotation(tk):
+    global new_pre_picked_annotation
+    Label(tk,text='annotation identifiers',background="#f2f2f2",width=30,anchor=W).grid(row=3,column=0)
+    new_pre_picked_annotation= StringVar(tk)
+    new_pre_picked_annotation.set('First')
+
+    menu=OptionMenu(tk,new_pre_picked_annotation,'First','Ensembl_tr', 'Ensembl_pr','UniProt')
+    menu.config(width=15)
+    menu.grid(row=3,column=1)
 
 def _save_and_exit_(top):
     global sorting_order
     global decoy_annotation
     global comments
     global probed
+    global pre_picked_annotation
     if new_probed.get()=='Y':
         probed='Y'
     if new_sorting_order.get()!='':
@@ -309,6 +322,8 @@ def _save_and_exit_(top):
         decoy_annotation=new_decoy_annotation.get().split(',')
     if new_comments.get()!='':
         comments=new_comments.get().split("\n")
+    if new_pre_picked_annotation.get()!='':
+        pre_picked_annotation=new_pre_picked_annotation.get()
     top.destroy()
 
 def _open_advanced_settings_():
@@ -325,6 +340,7 @@ def _open_advanced_settings_():
     _decoyAnnotation_(top)
     _comments_(top)
     _convert_to_probed_(top)
+    _pre_picked_annotation(top)
 
     # create partial save and exit for tk
     save_and_exit_argumented = partial(_save_and_exit_, top)
@@ -340,20 +356,21 @@ def _open_advanced_settings_():
 #
 
 def _print_arguments_():
-    print 'directory used:         '+directory
-    print 'PSM file:               '+psm_file
-    print 'species:                '+species.get().replace(' ','_')
-    print 'database:               '+database.get().upper()
-    print 'database version:       '+str(int(database_v.get()))
-    print 'decoy annotation:       '+str(decoy_annotation)
-    print 'allowed mismatches:     '+str(int(allowed_mismatches.get()))
-    print 'proBAMconvert version: '+str(version)
-    print 'sorting order:          '+ sorting_order
-    print 'project name:           '+str(name.get())
-    print 'map decoys:             '+map_decoy.get()
-    print 'remove duplicate PSMs:  '+rm_duplicates.get()
-    print '3-frame translation:    '+three_frame_translation.get()
-    print 'convert to proBED       '+probed
+    print 'directory used:          '+directory
+    print 'PSM file:                '+psm_file
+    print 'species:                 '+species.get().replace(' ','_')
+    print 'database:                '+database.get().upper()
+    print 'database version:        '+str(int(database_v.get()))
+    print 'decoy annotation:        '+str(decoy_annotation)
+    print 'allowed mismatches:      '+str(int(allowed_mismatches.get()))
+    print 'proBAMconvert version:   '+str(version)
+    print 'sorting order:           '+ sorting_order
+    print 'project name:            '+str(name.get())
+    print 'allow decoys:            '+allow_decoys.get()
+    print 'remove duplicate PSMs:   '+rm_duplicates.get()
+    print '3-frame translation:     '+three_frame_translation.get()
+    print 'convert to proBED        '+probed
+    print 'pre picked annotation    '+pre_picked_annotation
 
 #
 # Execute proBAMconvert
@@ -381,33 +398,37 @@ def execute_proBAM(root):
     try:
         _print_arguments_()
         command_line = "python proBAM.py --name " + str(name) + " --mismatches " + str(
-            allowed_mismatches) + " --version " + str(database_v.get()) \
+            allowed_mismatches.get()) + " --version " + str(database_v.get()) \
                        + " --database " + str(database.get().upper()) + " --species " + str(species.get()) + " --file " + str(psm_file) + \
                        " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates.get()) + \
-                       " --map_decoy " + str(map_decoy) + " --tri_frame_translation " + str(three_frame_translation)
-        print '***************************************************************************'
+                       " --allow_decoys " + str(allow_decoys.get()) + " --tri_frame_translation " + \
+                       str(three_frame_translation.get()+" --pre_picked_annotation "+pre_picked_annotation)
+        print '\n'
 
 
         # hash PSM_DATA and define variables
+        print 1
         psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
-
+        print 2
         parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
                                            database.get().upper(),decoy_annotation,int(database_v.get()),
-                                            three_frame_translation.get())
+                                            three_frame_translation.get(),pre_picked_annotation)
+        print 3
         annotation=parse_results[1]
+        print 4
         psm_hash=parse_results[0]
         transcript_hash=annotation[0]
         exon_hash=annotation[1]
-
+        id_map=parse_results[2]
+        print 5
         # convert to SAM
         if probed=='N':
             file = proBAM.open_sam_file(directory, name.get())
             proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
                                      species.get(), command_line, psm_file,
                               comments)
-            proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches, file, map_decoy,
-                    rm_duplicates,
-                    three_frame_translation, psm_file)
+            proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches.get(),
+                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation.get(), psm_file,id_map)
             proBAM.compute_NH_XL(directory, name.get())
             proBAM.sam_2_bam(directory, name.get())
         else:
@@ -415,9 +436,9 @@ def execute_proBAM(root):
             proBAM_proBED.create_BED_header(file, version, database.get().upper(), sorting_order.get(), database_v.get(),
                                             species.get(), command_line,
                                             psm_file, comments)
-            proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches, file,
-                                  map_decoy,
-                                  rm_duplicates, three_frame_translation, psm_file)
+            proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation,
+                                  allowed_mismatches.get(), file, allow_decoys.get(), rm_duplicates.get(),
+                                  three_frame_translation.get(), psm_file, id_map)
 
         root.config(cursor="")
         print("proBAM conversion succesful")
@@ -497,7 +518,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    os.chdir("/home/vladie/Desktop/proBAMconvert")
+    #os.chdir("/home/vladie/Desktop/proBAMconvert")
     _get_global_arguments_()
     GUI()
 

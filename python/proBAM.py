@@ -75,12 +75,13 @@ def get_input_variables():
     global decoy_annotation
     global version
     global sorting_order
-    global map_decoy
+    global allow_decoys
     global rm_duplicates
     global three_frame_translation
     global command_line
     global comments
     global probed
+    global pre_picked_annotation
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
@@ -98,10 +99,11 @@ def get_input_variables():
     version='1.0'
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
-    map_decoy=""
+    allow_decoys=""
     rm_duplicates=""
     three_frame_translation
     probed="N"
+    pre_picked_annotation="First"
 
 
     #
@@ -110,11 +112,11 @@ def get_input_variables():
     #
 
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o:i:",["name=","mismatches=","version=","database=",
+        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o:i:p:",["name=","mismatches=","version=","database=",
                                                                            "species=","file=","directory=",
-                                                                           "rm_duplicates=","map_decoy=",
+                                                                           "rm_duplicates=","allow_decoys=",
                                                                            "tri_frame_translation=","decoy_annotation=",
-                                                                           "sorting_order=","probed="])
+                                                                           "sorting_order=","probed=","pre_picked_annotation=])
     except getopt.GetoptError as err:
         print(err)
         sys.exit()
@@ -145,16 +147,18 @@ def get_input_variables():
             directory=a
         if o in ('-r','--rm_duplicates'):
             rm_duplicates=a
-        if o in ('-a','--map_decoy'):
-            map_decoy=a
+        if o in ('-a','--allow_decoys'):
+            allow_decoys=a
         if o in ('-t','--three_frame_translation'):
-            map_decoy=a
+            allow_decoys=a
         if o in ('-e','--decoy_annotation'):
             decoy_annotation=a.split(',')
-        if o in ('o','--sorting_order'):
+        if o in ('-o','--sorting_order'):
             sorting_order=a
-        if o in ('i','--probed'):
+        if o in ('-i','--probed'):
             probed=a
+        if o in ('-p','--pre_picked_annotation'):
+            pre_picked_annotation=a
 
     #
     # Check for correct argument, output argument and parse
@@ -186,8 +190,8 @@ def get_input_variables():
         os.chdir(directory)
     if rm_duplicates!="Y":
         rm_duplicats="N"
-    if map_decoy!="Y":
-        map_decoy="N"
+    if allow_decoys!="Y":
+        allow_decoys="N"
     if three_frame_translation!="Y":
         three_frame_translation="N"
     if probed!='Y':
@@ -200,7 +204,7 @@ def get_input_variables():
         allowed_mismatches) + " --version " + str(database_v) \
                    + " --database " + str(database) + " --species " + str(species) + " --file " + str(psm_file) + \
                    " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates) + \
-                   " --map_decoy " + str(map_decoy) + " --tri_frame_translation " + str(three_frame_translation )
+                   " --allow_decoys " + str(allow_decoys) + " --tri_frame_translation " + str(three_frame_translation )
 
     # ouput variables
     print(  "psm file:                                      " + str(file) +"\n"+
@@ -208,11 +212,13 @@ def get_input_variables():
             "database                                       " + str(database) +"\n"+
             "database version:                              " + str(database_v) +"\n"+
             "species:                                       " + str(species) +"\n"+
+            "allow decoys:                                  " + str(allow_decoys) +"\n"+
             "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
             "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
             "decoy annotations:                             " + str(decoy_annotation)+"\n"+
             "sorting order:                                 " + str(sorting_order)+"\n"+
-            "proBED:                                        " + str(probed))
+            "proBED:                                        " + str(probed)+"\n"+
+            "pre picked annotation                          " + str(pre_picked_annotation))
 
 
 '''
@@ -222,8 +228,8 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/NTermCofr.pepXML"
-species="mus_musculus"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mztab"
+species="homo_sapiens"
 database='ENSEMBL'
 database_v=85
 # TODO Let users specify used the decoy annotation
@@ -234,15 +240,17 @@ version='1.0'
 sorting_order='unknown'
 name='test'
 three_frame_translation='Y'
-map_decoy="N"
+allow_decoys="N"
 rm_duplicates="Y"
 probed='N'
 comments=''
+pre_picked_annotation="First"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
               " --directory "+str(directory)+" --rm_duplicates "+str(rm_duplicates)+\
-              " --map_decoy "+str(map_decoy)+" --tri_frame_translation "+str(three_frame_translation)
+              " --allow_decoys "+str(allow_decoys)+" --tri_frame_translation "+str(three_frame_translation+
+              "--pre_picked_annotation "+str(pre_picked_annotation))
 
 # ouput variables
 print(  "psm file:                                      " + str(psm_file) +"\n"+
@@ -252,8 +260,9 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "species:                                       " + str(species) +"\n"+
         "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
         "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
-        "map decoys:                                    " + str(map_decoy)+"\n"+
-        "remove duplicates:                             " + str(rm_duplicates))
+        "allow decoys:                                   " + str(allow_decoys)+"\n"+
+        "remove duplicates:                             " + str(rm_duplicates)+"\n"+
+        "pre picked annotation                          " + str(pre_picked_annotation))
 
 #######################
 ### GETTERS/SETTERS ###
@@ -292,8 +301,8 @@ def open_sam_file(directory,name):
 #
 # Convert PSM to SAM
 #
-def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
-            three_frame_translation,psm_file):
+def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
+            three_frame_translation,psm_file,id_map):
     '''
     :param psm_hash: dictionairy of psm files
     :param transcript_hash: dictionairy of transcripts
@@ -322,11 +331,11 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                         if d in row['proteins'][p]['protein'].upper():
                             decoy=1
                             key=row['proteins'][p]['protein'].upper().split(d)[1]
-                            if key in transcript_hash.keys():
-                                temp_result= decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,
-                                                 map_decoy,enzyme,enzyme_specificity,three_frame_translation)
+                            if (key not in id_map.keys()) or (id_map[key] not in transcript_hash.keys()):
+                                temp_result= decoy_PSM_to_SAM(psm,row,key,enzyme,enzyme_specificity)
                                 if rm_duplicates=="Y":
-                                    dup_key= str(temp_result[9])+"_"+str(temp_result[2])+"_"+str(temp_result[3])
+                                    dup_key= str(temp_result[0])+"_"+str(temp_result[9])+"_"+str(temp_result[2])\
+                                             +"_"+str(temp_result[3])
                                     if dup_key not in dup.keys():
                                         dup[dup_key]=1
                                         write_psm(temp_result,file)
@@ -335,7 +344,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                             else:
                                 temp_result=unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity)
                                 if rm_duplicates=="Y":
-                                    dup_key= str(temp_result[9])+"_"+str(temp_result[2])+"_"+str(temp_result[3])
+                                    dup_key= str(str(temp_result[0])+"_"+temp_result[9])+"_"+str(temp_result[2])\
+                                             +"_"+str(temp_result[3])
                                     if dup_key not in dup.keys():
                                         dup[dup_key]=1
                                         write_psm(temp_result,file)
@@ -345,26 +355,26 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                     if decoy==0:
                         key=row['proteins'][p]['protein']
                         # Filter out PSM where transcript sequences were not found/ non-existent
-                        if key not in transcript_hash.keys():
+                        if (key not in id_map.keys()) or (id_map[key] not in transcript_hash.keys()):
                             write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                         # transcript not on an canonical transcript
                         # TODO do this nicer by fetching canonical chr
-                        elif len(transcript_hash[key]['chr']) > 4:
+                        elif len(transcript_hash[id_map[key]]['chr']) > 4:
                             write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity), file)
                         else:
                             if three_frame_translation=="Y":
                                 protein_hit=map_peptide_to_protein_3frame(row['peptide'],
-                                                                          transcript_hash[key]['transcript_seq'],
+                                                                          transcript_hash[id_map[key]]['transcript_seq'],
                                                                           allowed_mismatches,
-                                                                          transcript_hash[key]['strand'])[0]
+                                                                          transcript_hash[id_map[key]]['strand'])[0]
                                 pre_post_aa=map_peptide_to_protein_3frame(row['peptide'],
-                                                                          transcript_hash[key]['transcript_seq'],
+                                                                          transcript_hash[id_map[key]]['transcript_seq'],
                                                                           allowed_mismatches,
-                                                                          transcript_hash[key]['strand'])[1]
+                                                                          transcript_hash[id_map[key]]['strand'])[1]
                             else:
-                                protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[key]['protein_seq']
+                                protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
                                                                    ,allowed_mismatches)[0]
-                                pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[key]['protein_seq']
+                                pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
                                                                    ,allowed_mismatches)[1]
                             if len(protein_hit)==0:
                                 write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
@@ -378,25 +388,25 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #QNAME
                                     temp_result[0]=psm['spectrum']
                                     #FLAG
-                                    temp_result[1]=calculate_FLAG(transcript_hash[key]['strand'],row['hit_rank'],
+                                    temp_result[1]=calculate_FLAG(transcript_hash[id_map[key]]['strand'],row['hit_rank'],
                                                                   decoy)
                                     #RNAME
-                                    temp_result[2]='chr'+str(transcript_hash[key]['chr'])
+                                    temp_result[2]='chr'+str(transcript_hash[id_map[key]]['chr'])
                                     #POS
                                     temp_result[3]=calculate_genome_position(phit[0],
-                                                                             transcript_hash[key]['strand'],
-                                                                             transcript_hash[key]['5UTR_offset'],
-                                                                             transcript_hash[key]['start_exon_rank'],
+                                                                             transcript_hash[id_map[key]]['strand'],
+                                                                             transcript_hash[id_map[key]]['5UTR_offset'],
+                                                                             transcript_hash[id_map[key]]['start_exon_rank'],
                                                                              row['peptide'],
-                                                                             exon_hash[transcript_hash[key]['transcript_id']],
-                                                                             transcript_hash[key]['chr'],
+                                                                             exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                                             transcript_hash[id_map[key]]['chr'],
                                                                              three_frame_translation)
                                     #MAPQ
                                     temp_result[4]=255
                                     #CIGAR
                                     temp_result[5]=compute_cigar(temp_result[3],
-                                                                 exon_hash[transcript_hash[key]['transcript_id']],
-                                                                 transcript_hash[key]['strand'],row['peptide'])[0]
+                                                                 exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                                 transcript_hash[id_map[key]]['strand'],row['peptide'])[0]
                                     #RNEXT
                                     temp_result[6]='*'
                                     #PNEXT
@@ -408,11 +418,11 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                         phit_loc=phit[0]
                                     else:
                                         phit_loc=phit[0]*3
-                                    if int(transcript_hash[key]['strand'])==1:
-                                        temp_result[9]=str(transcript_hash[key]['transcript_seq']\
+                                    if int(transcript_hash[id_map[key]]['strand'])==1:
+                                        temp_result[9]=str(transcript_hash[id_map[key]]['transcript_seq']\
                                                    [phit_loc:(phit_loc+(len(row['peptide'])*3))])
                                     else:
-                                        temp_result[9]=reverse_complement(str(transcript_hash[key]['transcript_seq']\
+                                        temp_result[9]=reverse_complement(str(transcript_hash[id_map[key]]['transcript_seq']\
                                                    [phit_loc:(phit_loc+(len(row['peptide'])*3))]))
                                     #QUAL
                                     temp_result[10]='*'
@@ -432,8 +442,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     temp_result[15]='YP:Z:'+str(key)
                                     #XF: reading frame of the peptide
                                     temp_result[16]='XF:Z:'+compute_cigar(temp_result[3],
-                                                                 exon_hash[transcript_hash[key]['transcript_id']],
-                                                                 transcript_hash[key]['strand'],row['peptide'])[1]
+                                                                 exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                                 transcript_hash[id_map[key]]['strand'],row['peptide'])[1]
                                     #XI: peptide intensity
                                     temp_result[17]="XI:f:*"
                                     #XB: Mass error (experimental - calculated)
@@ -470,7 +480,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     # remove duplicates if rm_duplicates=Y
                                     if rm_duplicates=="Y":
                                         dup_key= str(temp_result[9])+"_"+\
-                                                          str(temp_result[2])+"_"+str(temp_result[3])
+                                                          str(str(temp_result[0])+"_"+temp_result[2])+"_"+str(temp_result[3])
                                         if dup_key not in dup.keys():
                                             dup[dup_key]=1
                                             write_psm(temp_result,file)
@@ -497,10 +507,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #QNAME
     temp_result[0]=psm['spectrum']
     #FLAG
-    if decoy==1:
-        temp_result[1]='4'
-    else:
-        temp_result[1]='1028'
+    temp_result[1]='4'
     #RNAME
     temp_result[2]='*'
     #POS
@@ -576,8 +583,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
 # Function to convert decoy PSM to SAM format
 #
 
-def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,map_decoy,enzyme,enzyme_specificity,
-                     three_frame_translation):
+def decoy_PSM_to_SAM(psm,row,key,enzyme,enzyme_specificity):
     '''
     :param psm: psm dictionairy
     :param row: row where decoy found
@@ -588,13 +594,18 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
     :param file: output file
     :return: SAM of decoy PSM
     '''
+
+    # LEGACY: map decoy to genome if map_decoy=Y
+    return unannotated_PSM_to_SAM(psm, row, 1, key, enzyme, enzyme_specificity)
+    '''
     temp_result=[None]*23
-    #map decoy to genome if map_decoy=Y
+
     if map_decoy=="Y":
-        protein_hit=map_peptide_to_protein(row['peptide'][::-1],transcript_hash[key]['protein_seq'],allowed_mismatches)[0]
-        pre_post_aa=map_peptide_to_protein(row['peptide'][::-1],transcript_hash[key]['protein_seq'],allowed_mismatches)[1]
+        protein_hit=map_peptide_to_protein(row['peptide'][::-1],transcript_hash[id_map[key]]['protein_seq'],allowed_mismatches)[0]
+        pre_post_aa=map_peptide_to_protein(row['peptide'][::-1],transcript_hash[id_map[key]]['protein_seq'],allowed_mismatches)[1]
     else:
-        protein_hit=[]
+
+    protein_hit=[]
     if len(protein_hit)==0:
          return unannotated_PSM_to_SAM(psm,row,1,key,enzyme,enzyme_specificity)
     else:
@@ -607,25 +618,25 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             #QNAME
             temp_result[0]=psm['spectrum']
             #FLAG
-            temp_result[1]=calculate_FLAG(transcript_hash[key]['strand'],row['hit_rank'],
+            temp_result[1]=calculate_FLAG(transcript_hash[id_map[key]]['strand'],row['hit_rank'],
                                           1)
             #RNAME
-            temp_result[2]='chr'+str(transcript_hash[key]['chr'])
+            temp_result[2]='chr'+str(transcript_hash[id_map[key]]['chr'])
             #POS
             temp_result[3]=calculate_genome_position(phit[0],
-                                                     transcript_hash[key]['strand'],
-                                                     transcript_hash[key]['5UTR_offset'],
-                                                     transcript_hash[key]['start_exon_rank'],
+                                                     transcript_hash[id_map[key]]['strand'],
+                                                     transcript_hash[id_map[key]]['5UTR_offset'],
+                                                     transcript_hash[id_map[key]]['start_exon_rank'],
                                                      row['peptide'][::-1],
-                                                     exon_hash[transcript_hash[key]['transcript_id']],
-                                                     transcript_hash[key]['chr'],
+                                                     exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                     transcript_hash[id_map[key]]['chr'],
                                                      three_frame_translation)
             #MAPQ
             temp_result[4]=255
             #CIGAR
             temp_result[5]=compute_cigar(temp_result[3],
-                                         exon_hash[transcript_hash[key]['transcript_id']],
-                                         transcript_hash[key]['strand'],row['peptide'])
+                                         exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                         transcript_hash[id_map[key]]['strand'],row['peptide'])
             #RNEXT
             temp_result[6]='*'
             #PNEXT
@@ -633,11 +644,11 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             #TLEN
             temp_result[8]=0
             #SEQ
-            if int(transcript_hash[key]['strand'])==1:
-                temp_result[9]=str(transcript_hash[key]['transcript_seq']\
+            if int(transcript_hash[id_map[key]]['strand'])==1:
+                temp_result[9]=str(transcript_hash[id_map[key]]['transcript_seq']\
                            [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))])
             else:
-                temp_result[9]=reverse_complement(str(transcript_hash[key]['transcript_seq']\
+                temp_result[9]=reverse_complement(str(transcript_hash[id_map[key]]['transcript_seq']\
                            [(phit[0]*3):((phit[0]*3)+(len(row['peptide'])*3))]))
             #QUAL
             temp_result[10]='*'
@@ -656,8 +667,8 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             temp_result[15] = 'YP:Z:' + str(key)
             # XF: reading frame of the peptide
             temp_result[16] = 'XF:Z:' + compute_cigar(temp_result[3],
-                                                      exon_hash[transcript_hash[key]['transcript_id']],
-                                                      transcript_hash[key]['strand'], row['peptide'])[1]
+                                                      exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                      transcript_hash[id_map[key]]['strand'], row['peptide'])[1]
             # XI: peptide intensity
             temp_result[17] = "XI:f:*"
             # XB: Mass error (experimental - calculated)
@@ -665,9 +676,9 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             # XR: reference peptide sequence
             temp_result[19] = 'XR:Z:' + row['peptide']
             # YB: preceding 2AA
-            temp_result[20] = "YB:Z:" + str(pre_post_aa[0])
+            temp_result[20] = "YB:Z:*"
             # YA: following 2AA:
-            temp_result[21] = "YA:Z:" + str(pre_post_aa[1])
+            temp_result[21] = "YA:Z:*"
             # XS: PSM score
             temp_result[22] = "XS:f:" + str(row['search_score']['score'])
             # XQ: PSM-Qvalue
@@ -692,7 +703,7 @@ def decoy_PSM_to_SAM(psm,row,key,transcript_hash,exon_hash,allowed_mismatches,ma
             #XU= url
             temp_result[31]="XU:Z:*"
             return temp_result
-
+    '''
 #
 # Create SAM header
 #
@@ -749,6 +760,9 @@ def sam_2_bam(directory,name):
     bam.write("\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BC" + \
                 "\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00")
     bam.close()
+
+    # For our special MAC-users:
+    # pysam.sort((directory + name + '.bam'), (directory + name + '.sorted'))
 
     pysam.sort((directory+name+'.bam'),"-o",(directory+name+'.sorted.bam'))
     pysam.index(directory+name+'.sorted.bam')
@@ -814,26 +828,28 @@ if __name__=='__main__':
 
     # hash PSM_DATA and define variables
     psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
-    parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation)
+    parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation
+                                          ,pre_picked_annotation)
 
     annotation=parse_results[1]
     psm_hash=parse_results[0]
     transcript_hash=annotation[0]
     exon_hash=annotation[1]
+    id_map=parse_results[2]
 
     # convert to SAM
     if probed=='N':
         file = open_sam_file(directory, name)
         create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
-        PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,rm_duplicates,
-                three_frame_translation,psm_file)
+        PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
+                three_frame_translation,psm_file,id_map)
         compute_NH_XL(directory, name)
         sam_2_bam(directory, name)
     # convert to BED
     else:
         file = proBAM_proBED.open_bed_file(directory, name)
         proBAM_proBED.create_BED_header(file, database, database_v, command_line, psm_file, comments)
-        proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,map_decoy,
+        proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,
                               rm_duplicates,three_frame_translation,psm_file)
 
 

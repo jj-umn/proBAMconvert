@@ -19,7 +19,7 @@ from cogent.core.genetic_code import DEFAULT as standard_code
 from cogent.db.ensembl import Genome,Species,host
 import sqlalchemy as sql
 import proBAM_biomart
-
+import sys
 
 
 #
@@ -56,7 +56,6 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species,three_frame_
     :param species: species name
     :return: dictionairy mapping proteins into ENSEMBL
     '''
-
     print('Commencing ENSEMBL data retrieval')
     # create connection to ensembl database
     if species=="arabidopsis_thaliana":

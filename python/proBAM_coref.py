@@ -272,7 +272,7 @@ def map_peptide_to_protein(peptide_seq,protein_seq,allowed_mismatches):
 #
 # Function to calculate FLAG of PSM
 #
-def calculate_FLAG(strand,rank,decoy):
+def calculate_FLAG(strand,rank,unmapped):
     '''
     :param strand: transcript strand
     :param rank: psm rank
@@ -285,8 +285,8 @@ def calculate_FLAG(strand,rank,decoy):
         FLAG=FLAG+16
     if rank!=1:
         FLAG=FLAG+256
-    if decoy==1:
-        FLAG=FLAG+1024
+    if unmapped==1:
+        FLAG=FLAG+4
     return FLAG
 
 #

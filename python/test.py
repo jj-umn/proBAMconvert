@@ -93,7 +93,5 @@ map_peptide_to_protein_3frame(' I L L Q E I G T','ATTTAGGACCAATAAGTCTTAATTGGTTTG
                                'CCAATAATATTCAAAGAGCAAGGGCTGACTCTGCCGCTGTACCAATCTCCTGTAAAAGAATTAGATAAATTCAAATTAGAC' \
                                'TTAG ',0,-1)
 '''
-s = BioMart(host='www.ensembl.org')
-s.lookfor()
-
-print s.version("ensembl")
+import re
+print re.match("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}",'Q8IW75') is not None

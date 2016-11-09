@@ -185,7 +185,7 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
         #add attributs
         biomart.add_attribute_to_xml("ensembl_transcript_id")
         biomart.add_attribute_to_xml("transcript_length")
-        biomart.add_attribute_to_xml("uniprot_swissprot")
+        biomart.add_attribute_to_xml("uniprot_sptrembl")
         attributes=biomart.attributes(dataset)
 
         #execute query

@@ -104,7 +104,7 @@ def _get_evalue_(psm):
     #print psm.keys()
     for key in psm.keys():
         if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
-        or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower():
+        or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
             hit=1
             hit_key=key
     if hit==1:
