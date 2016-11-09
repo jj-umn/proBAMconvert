@@ -94,7 +94,7 @@ def _get_hit_rank_(psm,column_id):
         return psm[column_id['rank']]
     else:
         return "*"
-    
+
 def _get_evalue_(psm,column_id):
     if 'fdr' in column_id.keys():
         return psm[column_id['fdr']]
