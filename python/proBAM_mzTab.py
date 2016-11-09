@@ -48,12 +48,12 @@ def get_PSM_mztab(psm_file):
                 if row[0]=="PSH":
                     for pos in range(0,len(row)):
                         column_id[row[pos]]=pos
-                for key in column_id.keys():
-                    if "rank" in key.lower():
-                        column_id['rank']=column_id[key]
-                    if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
-                            or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
-                        column_id['fdr'] = column_id[key]
+                    for key in column_id.keys():
+                        if "rank" in key.lower():
+                            column_id['rank']=int(column_id[key])
+                        if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
+                                or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
+                            column_id['fdr'] = int(column_id[key])
 
                 if row[0]=="PSM":
                     #print row[0]
@@ -78,20 +78,28 @@ def get_PSM_mztab(psm_file):
                 modifications=_get_modifications_(psm[column_id["modifications"]])
                 modified_sequence=_get_modified_sequence_(psm[column_id["sequence"]],psm[column_id["modifications"]],
                                                           unimod,psimod)
-                temp_hash['search_hit'].append({"hit_rank":"*","modifications":modifications,
+                temp_hash['search_hit'].append({"hit_rank":_get_hit_rank_(psm,column_id),"modifications":modifications,
                                                 "modified_peptide":modified_sequence,
                                                 "peptide":psm[column_id['sequence']],
                                                 "massdiff":_calc_massdiff_(psm[column_id['exp_mass_to_charge']],
                                                                            psm[column_id['calc_mass_to_charge']]),
                                                 "search_score":{"score":psm[column_id['search_engine_score[1]']],
-                                                                "evalue":"*"},
+                                                                "evalue":_get_evalue_(psm,column_id)},
                                                 "proteins":proteins,"num_missed_cleavages":"*"})
-                if 'rank' in column_id.keys():
-                    temp_hash['search_hit']['hit_rank']=psm[column_id['rank']]
-                if 'fdr' in column_id.keys():
-                    temp_hash['search_hit']['search_score']['evalue']=psm[column_id['fdr']]
             psm_hash.append(temp_hash)
     return psm_hash
+
+def _get_hit_rank_(psm,column_id):
+    if 'rank' in column_id.keys():
+        return psm[column_id['rank']]
+    else:
+        return "*"
+    
+def _get_evalue_(psm,column_id):
+    if 'fdr' in column_id.keys():
+        return psm[column_id['fdr']]
+    else:
+        return '*'
 #
 # calculates massdiff
 #

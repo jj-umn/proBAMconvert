@@ -407,20 +407,15 @@ def execute_proBAM(root):
 
 
         # hash PSM_DATA and define variables
-        print 1
         psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
-        print 2
         parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
                                            database.get().upper(),decoy_annotation,int(database_v.get()),
                                             three_frame_translation.get(),pre_picked_annotation)
-        print 3
         annotation=parse_results[1]
-        print 4
         psm_hash=parse_results[0]
         transcript_hash=annotation[0]
         exon_hash=annotation[1]
         id_map=parse_results[2]
-        print 5
         # convert to SAM
         if probed=='N':
             file = proBAM.open_sam_file(directory, name.get())
