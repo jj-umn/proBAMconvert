@@ -101,7 +101,7 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species,three_frame_
 #
 # Retrieve DNA-sequence, Splice, construct protein sequence and store
 #
-def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species,three_frame_translation,mode):
+def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species,three_frame_translation,mode,):
     '''
     :param psm_hash: dictionair with protein / ensembl information ( see prepareAnnotationENSEMBL)
     :param ensembl:ensembl genome
@@ -201,7 +201,11 @@ def get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode):
     query = sql.select(select_obj,from_obj=[from_obj],
                            whereclause = exon_transcript_table.c.transcript_id.in_(transcript_ids))
 
-    #store exon information in hash, return hash
+    #speed up process by making a hash
+    if mode=='protein':
+        prot_tr={}
+        for key in psm_hash.keys():
+            prot_tr[psm_hash[key]['transcript_id']]=key
     for row in query.execute():
         if row[3] not in exon_hash.keys():
             exon_hash[row[3]]=[]
@@ -210,10 +214,9 @@ def get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode):
                 if psm_hash[row[3]]['start_exon_rank']==row[4]:
                     psm_hash[row[3]]['start_exon_rank']=row[2]
         elif mode=='protein':
-            for key in psm_hash:
-                if psm_hash[key]['transcript_id']==row[3]:
-                    if psm_hash[key]['start_exon_rank'] == row[4]:
-                        psm_hash[key]['start_exon_rank'] = row[2]
+            if row[3] in prot_tr.keys():
+                if psm_hash[prot_tr[row[3]]]['start_exon_rank'] == row[4]:
+                    psm_hash[prot_tr[row[3]]]['start_exon_rank'] = row[2]
         exon_hash[row[3]].append([str(row[0]),str(row[1]),str(row[2])])
     return [exon_hash,psm_hash]
 

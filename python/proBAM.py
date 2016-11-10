@@ -234,13 +234,13 @@ database='ENSEMBL'
 database_v=85
 # TODO Let users specify used the decoy annotation
 decoy_annotation=['REV_','DECOY_','_REVERSED']
-allowed_mismatches=0
+allowed_mismatches=1
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
 name='test'
 three_frame_translation='N'
-allow_decoys="N"
+allow_decoys="Y"
 rm_duplicates="N"
 probed='N'
 comments=''
@@ -302,7 +302,7 @@ def open_sam_file(directory,name):
 # Convert PSM to SAM
 #
 def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
-            three_frame_translation,psm_file,id_map):
+            three_frame_translation,psm_file,id_map,gui):
     '''
     :param psm_hash: dictionairy of psm files
     :param transcript_hash: dictionairy of transcripts
@@ -318,14 +318,20 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
         dup = {}
     enzyme=get_enzyme(psm_file)
     enzyme_specificity=get_enzyme_specificity(psm_file)
-    count_1=0
-    count_2=0
-    count_3=0
-    count_4=0
-    print len(psm_hash)
+    total_psms=len(psm_hash)
+    current_psm=0
+    percentage=0
+    print "0%                                       100%"
+    sys.stdout.write("[")
     for psm in psm_hash:
-        count_4+=1
-        print "PSM: ",count_4
+        # track progress
+        current_psm+=1
+        if current_psm/total_psms>percentage:
+            sys.stdout.write(u"\u25A0")
+            percentage+=0.025
+        # update window if in GUI
+        if gui!=None:
+            gui.update()
         # convert unmapped PSMs with their own converter
         if 'search_hit' not in psm.keys():
             continue
@@ -347,12 +353,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     if dup_key not in dup.keys():
                                         dup[dup_key]=1
                                         write_psm(temp_result,file)
-                                        count_2+=1
-                                        print 'decoy: ',count_2
                                 else:
                                     write_psm(temp_result,file)
-                                    count_2 += 1
-                                    print 'decoy: ', count_2
                             else:
                                 temp_result=unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity)
                                 if rm_duplicates=="Y":
@@ -360,26 +362,18 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                              +"_"+str(temp_result[3])
                                     if dup_key not in dup.keys():
                                         dup[dup_key]=1
-                                        count_3 += 1
-                                        print 'unannotated: ', count_3
                                         write_psm(temp_result,file)
                                 else:
-                                    count_3 += 1
-                                    print 'unannotated: ', count_3
                                     write_psm(temp_result,file)
 
                     if decoy==0:
                         key=row['proteins'][p]['protein']
                         # Filter out PSM where transcript sequences were not found/ non-existent
                         if (key not in id_map.keys()) or (id_map[key] not in transcript_hash.keys()):
-                            count_3 += 1
-                            print 'unannotated: ', count_3
                             write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                         # transcript not on an canonical transcript
                         # TODO do this nicer by fetching canonical chr
                         elif len(transcript_hash[id_map[key]]['chr']) > 4:
-                            count_3 += 1
-                            print 'unannotated: ', count_3
                             write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity), file)
                         else:
                             if three_frame_translation=="Y":
@@ -397,8 +391,6 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
                                                                    ,allowed_mismatches)[1]
                             if len(protein_hit)==0:
-                                count_3+=1
-                                print 'unannotated: ',count_3
                                 write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                             else:
                                 # map peptide on protein and retrieve hit position, iterate over all hits
@@ -505,13 +497,10 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                           str(str(temp_result[0])+"_"+temp_result[2])+"_"+str(temp_result[3])
                                         if dup_key not in dup.keys():
                                             dup[dup_key]=1
-                                            count_1 += 1
-                                            print 'hit: ', count_1
                                             write_psm(temp_result,file)
                                     else:
-                                        count_1 += 1
-                                        print 'hit: ', count_1
                                         write_psm(temp_result,file)
+    print "]"
     file.close()
 
 #
@@ -556,7 +545,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #Mandatory proteomics specific columns added to the proBam format
     #
     #NH: number of genomic location the peptide mapping to
-    temp_result[11]='NH:i:'+str(len(row['proteins']))
+    temp_result[11]='NH:i:*'
     #XO: uniqueness
     temp_result[12]='XO:Z:*'
     #XL: number of peptides the spectrum mapping to
@@ -598,9 +587,9 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     temp_result[29]="XE:i:"+str(enzyme)
     #XG: Petide type
     if decoy==1:
-        temp_result[30]="XG:Z:U"
-    else:
         temp_result[30]="XG:Z:D"
+    else:
+        temp_result[30]="XG:Z:U"
     #XU
     temp_result[31]="XU:Z:*"
     return temp_result
@@ -787,10 +776,11 @@ def sam_2_bam(directory,name):
                 "\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00")
     bam.close()
 
-    # For our special MAC-users:
-    # pysam.sort((directory + name + '.bam'), (directory + name + '.sorted'))
+    # Pysam v 0.8.4.:
+    pysam.sort((directory + name + '.bam'), (directory + name + '.sorted'))
 
-    pysam.sort((directory+name+'.bam'),"-o",(directory+name+'.sorted.bam'))
+    # For new pysam version, has error for bigger files
+    # pysam.sort("-o",(directory+name+'.sorted.bam'),(directory+name+'.bam'))
     pysam.index(directory+name+'.sorted.bam')
 #
 # function to calculate and adjust NH for every peptide
@@ -817,9 +807,15 @@ def compute_NH_XL(directory,name):
                 continue
             else:
                 if nh_key_line(line) in nh_hash:
-                    nh_hash[nh_key_line(line)]+=1
+                    if create_id_from_list([line.split('\t')[2],line.split('\t')[3],line.split('\t')[5]]) in \
+                            nh_hash[nh_key_line(line)]:
+                        continue
+                    else:
+                        nh_hash[nh_key_line(line)].append(create_id_from_list([line.split('\t')[2],line.split('\t')[3],
+                                                                               line.split('\t')[5]]))
                 else:
-                    nh_hash[nh_key_line(line)]=1
+                    nh_hash[nh_key_line(line)]=[(create_id_from_list([line.split('\t')[2], line.split('\t')[3],
+                                                                      line.split('\t')[5]]))]
     sam_file.close()
     sam_file=open(directory+name+'.sam','w')
     for line in original_file.split("\n"):
@@ -831,16 +827,24 @@ def compute_NH_XL(directory,name):
             sam_file.write(line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]]))))
         else:
             line=line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]])))
-            line=line.replace("NH:i:*","NH:i:"+str(nh_hash[nh_key_line(line)]))
+            line=line.replace("NH:i:*","NH:i:"+str(len(nh_hash[nh_key_line(line)])))
             sam_file.write(line)
         sam_file.write("\n")
 
+def create_id_from_list(list):
+    id=""
+    for i in list:
+        if id == "":
+            id+=str(i)
+        else:
+            id+="_"+str(i)
+    return id
 #
 # for a line creates a unique genomic location key for this peptide
 #
 def nh_key_line(line):
     line=line.split("\t")
-    key=line[2]+"_"+line[3]+"_"+line[5]+"_"+line[19]
+    key=line[19]+"_"+line[0]
     return key
 
 ####################
@@ -863,13 +867,12 @@ if __name__=='__main__':
     exon_hash=annotation[1]
     id_map=parse_results[2]
 
-    print psm_hash
     # convert to SAM
     if probed=='N':
         file = open_sam_file(directory, name)
         create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
         PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
-                three_frame_translation,psm_file,id_map)
+                three_frame_translation,psm_file,id_map,None)
         compute_NH_XL(directory, name)
         sam_2_bam(directory, name)
     # convert to BED

@@ -54,13 +54,12 @@ def get_PSM_mztab(psm_file):
                         if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
                                 or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
                             column_id['fdr'] = int(column_id[key])
-
                 if row[0]=="PSM":
-                    if row[column_id['PSM_ID']] not in spectrum.keys():
-                        spectrum[row[column_id['PSM_ID']]]=[]
-                        spectrum[row[column_id['PSM_ID']]].append(row)
+                    if row[column_id['spectra_ref']] not in spectrum.keys():
+                        spectrum[row[column_id['spectra_ref']]]=[]
+                        spectrum[row[column_id['spectra_ref']]].append(row)
                     else:
-                        spectrum[row[column_id['PSM_ID']]].append(row)
+                        spectrum[row[column_id['spectra_ref']]].append(row)
 
         #iterate over all spectrum to store in processable dictionairy
         for key in spectrum.keys():

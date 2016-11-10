@@ -30,6 +30,7 @@ import proBAM_IDparser
 import proBAM_proBED
 from functools import partial
 import webbrowser
+import thread
 
 #import needed for stand-alone executable
 import proBAM_mzTab
@@ -158,7 +159,7 @@ def _getMapDecoy_(tk):
     :return: selected map decoy option
     '''
     global allow_decoys
-    Label(text="Map Decoys",background="#f2f2f2",width=30,anchor=W).grid(row=6,column=0)
+    Label(text="Allow Decoys",background="#f2f2f2",width=30,anchor=W).grid(row=6,column=0)
     allow_decoys=StringVar(tk)
     allow_decoys.set('N')
     menu=OptionMenu(tk,allow_decoys,'N','Y')
@@ -425,7 +426,7 @@ def execute_proBAM(root):
                                      species.get(), command_line, psm_file,
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
-                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation.get(),psm_file,id_map)
+                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation.get(),psm_file,id_map,root)
             proBAM.compute_NH_XL(directory, name.get())
             proBAM.sam_2_bam(directory, name.get())
         else:
@@ -504,10 +505,12 @@ def GUI():
     _manual_(root)
     execute_proBAM_argumented=partial(execute_proBAM,root)
     global proBam_button
-    proBam_button=Button(text='Convert',fg="#0099cc",command=execute_proBAM_argumented,width=20,height=2,borderwidth=3)
+    proBam_button=Button(text='Convert',fg="#0099cc",command=lambda:
+        thread.start_new_thread(execute_proBAM_argumented, ()),width=20,height=2,borderwidth=3)
     proBam_button.grid(row=11,columnspan=2,pady=10)
     root.update_idletasks()
     root.mainloop()
+
 
 ####################
 ### MAIN PROGRAM ###
@@ -515,7 +518,7 @@ def GUI():
 
 if __name__=='__main__':
     #start GUI
-    #os.chdir("/home/vladie/Desktop/proBAMconvert")
+    os.chdir("/home/vladie/Desktop/proBAMconvert")
     _get_global_arguments_()
     GUI()
 

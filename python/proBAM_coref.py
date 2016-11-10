@@ -291,7 +291,7 @@ def calculate_FLAG(strand,rank,unmapped):
     FLAG=0
     if strand==-1:
         FLAG=FLAG+16
-    if rank!=1:
+    if str(rank)!=str(1):
         FLAG=FLAG+256
     if unmapped==1:
         FLAG=FLAG+4
@@ -307,7 +307,7 @@ def create_XM(modifications):
     '''
     XM='XM:Z:'
     if modifications==[]:
-        XM+='NA'
+        XM+='*'
     else:
         for mod in modifications:
             if ';' in XM:
