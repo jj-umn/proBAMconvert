@@ -124,6 +124,7 @@ def compute_cigar(gen_pos,exons,strand,peptide):
 #
 # Function returns genomic position of the leftmost base
 #
+#
 def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,chr,three_frame_translation):
     '''
     :param phit: location of peptide hit
@@ -135,6 +136,10 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     :param chr: transcript chr
     :return: genomic start position
     '''
+    #get start exon rank:
+    for exon in exons:
+        if str(exon[0])==str(start_exon_rank):
+            print exon[2]
     if three_frame_translation=='Y':
         if strand=='1':
             tr_pos=(phit)
@@ -183,11 +188,14 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     print '*************************************************'
     print 'test:',start_exon_rank,phit,strand
     print pointer,tr_pos, offset
-    print remember_exon
+    #print remember_exon
     print gen_pos,peptide,strand,chr
     print '*************************************************'
     print ''
+    import sys
+    sys.exit()
     '''
+
     return str(gen_pos)
 
 #

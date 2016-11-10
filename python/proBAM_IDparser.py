@@ -116,7 +116,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
                 conversion=_id_map_('UNIPROT/SWISSPROT','ENSEMBL',protein_ID,psm_hash,species,decoy_annotation,database_v)
                 id_map=conversion[0]
                 psm_hash=conversion[1]
-                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(id_map.values(),'transcript',database_v,species,three_frame_translation)
+                annotation= proBAM_ENSEMBL.prepareAnnotationENSEMBL(id_map.values(),'transcript',database_v,species,three_frame_translation,)
             return [psm_hash,annotation,id_map]
         # raise error if database unsupported
         else:

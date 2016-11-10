@@ -56,13 +56,11 @@ def get_PSM_mztab(psm_file):
                             column_id['fdr'] = int(column_id[key])
 
                 if row[0]=="PSM":
-                    #print row[0]
                     if row[column_id['PSM_ID']] not in spectrum.keys():
                         spectrum[row[column_id['PSM_ID']]]=[]
                         spectrum[row[column_id['PSM_ID']]].append(row)
                     else:
                         spectrum[row[column_id['PSM_ID']]].append(row)
-
 
         #iterate over all spectrum to store in processable dictionairy
         for key in spectrum.keys():

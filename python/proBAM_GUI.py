@@ -411,19 +411,21 @@ def execute_proBAM(root):
         parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
                                            database.get().upper(),decoy_annotation,int(database_v.get()),
                                             three_frame_translation.get(),pre_picked_annotation)
-        annotation=parse_results[1]
-        psm_hash=parse_results[0]
-        transcript_hash=annotation[0]
-        exon_hash=annotation[1]
-        id_map=parse_results[2]
+
+        annotation = parse_results[1]
+        psm_hash = parse_results[0]
+        transcript_hash = annotation[0]
+        exon_hash = annotation[1]
+        id_map = parse_results[2]
+
         # convert to SAM
         if probed=='N':
             file = proBAM.open_sam_file(directory, name.get())
             proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
                                      species.get(), command_line, psm_file,
                               comments)
-            proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, allowed_mismatches.get(),
-                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation.get(), psm_file,id_map)
+            proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
+                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation.get(),psm_file,id_map)
             proBAM.compute_NH_XL(directory, name.get())
             proBAM.sam_2_bam(directory, name.get())
         else:

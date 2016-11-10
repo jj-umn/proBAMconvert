@@ -44,7 +44,7 @@ def get_PSM_mzid(psm_file):
                 proteins=[]
                 massdiff=_cal_massdiff_(psm['experimentalMassToCharge'],psm['calculatedMassToCharge'])
                 for protein in psm["PeptideEvidenceRef"]:
-                        proteins.append({"protein":accession_hash[protein['peptideEvidence_ref']]})
+                    proteins.append({"protein":accession_hash[protein['peptideEvidence_ref']]})
                 mod_peptide=_get_mod_peptide_sequence_(psm['peptide_ref'],mod_list)
                 modifications=_get_peptide_modifications_(mod_list)
                 score=_get_score_(psm)
@@ -71,6 +71,11 @@ def _get_accessions_(psm_file):
                         ref=tag[1].replace("\"","")
                     elif tag[0]=="id":
                         id=tag[1].replace("\"","")
+                if '>' in id:
+                    id=id.replace('>','')
+                if '\n' in id:
+                    id=id.replace('\n', '')
+
                 accession_hash[id]=ref
     return accession_hash
 

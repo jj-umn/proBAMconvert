@@ -95,12 +95,13 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species,three_frame_
         psm_protein_id[row[id]]={'transcript_id':row[0],'translation_id':row[1],
                                  'transcript_seq':'','protein_seq':'',
                                  'chr':'','strand':'','5UTR_offset':row[3],'start_exon_rank':row[4]}
-    return ensembl_construct_sequences(psm_protein_id,ensembl,transcript_ids,database_v,species,three_frame_translation)
+    return ensembl_construct_sequences(psm_protein_id,ensembl,transcript_ids,database_v,species,
+                                       three_frame_translation,mode)
 
 #
 # Retrieve DNA-sequence, Splice, construct protein sequence and store
 #
-def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species,three_frame_translation):
+def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species,three_frame_translation,mode):
     '''
     :param psm_hash: dictionair with protein / ensembl information ( see prepareAnnotationENSEMBL)
     :param ensembl:ensembl genome
@@ -138,7 +139,7 @@ def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,speci
     del biomart_result
 
     # get exons directly from core database
-    temp_exon_hash=get_ensembl_exons(ensembl,transcript_ids,psm_hash)
+    temp_exon_hash=get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode)
     exon_hash=temp_exon_hash[0]
     psm_hash=temp_exon_hash[1]
     del temp_exon_hash
@@ -175,7 +176,7 @@ def retrieve_protein_seq(transcript_seq,exons,offset,start_exon):
             break
     return transcript_seq[(count-1):len(transcript_seq)]
 
-def get_ensembl_exons(ensembl,transcript_ids,psm_hash):
+def get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode):
     '''
     :param ensembl: ENSEMBL genome
     :param transcript_ids: list of transcript ids
@@ -204,9 +205,15 @@ def get_ensembl_exons(ensembl,transcript_ids,psm_hash):
     for row in query.execute():
         if row[3] not in exon_hash.keys():
             exon_hash[row[3]]=[]
-        if row[3] in psm_hash.keys():
-            if psm_hash[row[3]]['start_exon_rank']==row[4]:
-                psm_hash[row[3]]['start_exon_rank']=row[2]
+        if mode=='transcript':
+            if row[3] in psm_hash.keys():
+                if psm_hash[row[3]]['start_exon_rank']==row[4]:
+                    psm_hash[row[3]]['start_exon_rank']=row[2]
+        elif mode=='protein':
+            for key in psm_hash:
+                if psm_hash[key]['transcript_id']==row[3]:
+                    if psm_hash[key]['start_exon_rank'] == row[4]:
+                        psm_hash[key]['start_exon_rank'] = row[2]
         exon_hash[row[3]].append([str(row[0]),str(row[1]),str(row[2])])
     return [exon_hash,psm_hash]
 
