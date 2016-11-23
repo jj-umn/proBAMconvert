@@ -75,7 +75,7 @@ def compute_cigar(gen_pos,exons,strand,peptide):
     pointer=0
     debug=0
     # debug section for wrong CIGAR
-    #if peptide=="TLISDIEAVK":
+    #if peptide=="SCCSCCPVGCAK":
     #    debug=1
     length= int(len(peptide)*3)
     exons=sorted(exons,key=lambda x: int(x[2]))
@@ -86,7 +86,7 @@ def compute_cigar(gen_pos,exons,strand,peptide):
     for exon in adjusted_exons:
         exon=[int(numeric_string) for numeric_string in exon]
         if hit ==0:
-            if gen_pos >= exon[1]:
+            if gen_pos > exon[1]:
                 continue
             else:
                 if (gen_pos+length)<=exon[1]+1:
@@ -105,21 +105,24 @@ def compute_cigar(gen_pos,exons,strand,peptide):
         if hit!=0:
             cigar+=(str((exon[0]-prev_exon_end-1))+'N')
             if (exon[0]+(length)-1)>exon[1]+1:
-                cigar=cigar+(str((exon[1]-exon[0]))+'M')
-                length=length-(exon[1]-exon[0])
+                cigar=cigar+(str((exon[1]-exon[0]+1))+'M')
+                length=length-(exon[1]-exon[0]+1)
                 frame_pos+=str(exon[0]%3)+','
+                prev_exon_end = exon[1]
                 continue
             else:
                 frame_pos+=str(exon[0]%3)
                 cigar=cigar+(str(length)+'M')
                 break
     #debug section fro wrong CIGAR
-    '''if debug==1:
+    '''
+    if len(cigar.split('M'))>3:
         print strand
         print peptide
         print cigar
         print exons
-        print gen_pos'''
+        print gen_pos,length
+    '''
     return [cigar,frame_pos]
 #
 # Function returns genomic position of the leftmost base
@@ -305,9 +308,9 @@ def create_XM(modifications):
     :param modifications: psm modification
     :return: modification in proBAM format
     '''
-    XM='XM:Z:'
+    XM=''
     if modifications==[]:
-        XM+='*'
+        return'*'
     else:
         for mod in modifications:
             if ';' in XM:

@@ -50,6 +50,8 @@ def get_PSM_mzid(psm_file):
                 score=_get_score_(psm)
 
                 temp_hash['search_hit'].append({"hit_rank":psm['rank'],"modifications":modifications,
+                                                "calc_neutral_pep_mass": psm['experimentalMassToCharge'],
+                                                "precursor_neutral_mass": psm['calculatedMassToCharge'],
                                                 "modified_peptide":mod_peptide,"peptide":psm['peptide_ref'],
                                                 "search_score":{"score":_get_score_(psm),"evalue":_get_evalue_(psm)},
                                                 "proteins":proteins,"num_missed_cleavages":"0",

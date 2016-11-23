@@ -231,18 +231,18 @@ directory="/home/vladie/Desktop/proBAMconvert/output/"
 psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mztab"
 species="homo_sapiens"
 database='ENSEMBL'
-database_v=85
+database_v=80
 # TODO Let users specify used the decoy annotation
 decoy_annotation=['REV_','DECOY_','_REVERSED']
-allowed_mismatches=1
+allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
-name='test'
+name='PXD001524'
 three_frame_translation='N'
 allow_decoys="Y"
 rm_duplicates="N"
-probed='N'
+probed='Y'
 comments=''
 pre_picked_annotation="First"
 
@@ -477,7 +477,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #XA: Whether the peptide is well annotated
                                     temp_result[25]=create_XA(phit[1])
                                     #XM: Modification
-                                    temp_result[26]=create_XM(row['modifications'])
+                                    temp_result[26]='XM:Z:'+create_XM(row['modifications'])
                                     #XN: number of mis-cleavages
                                     if 'num_missed_cleaveges' in row.keys():
                                         temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
@@ -575,7 +575,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #XA: Whether the peptide is well annotated
     temp_result[25]='XA:i:2'
     #XM: Modification
-    temp_result[26]=create_XM(row['modifications'])
+    temp_result[26]='XM:Z:'+create_XM(row['modifications'])
     #XN: number of mis-cleavages
     if 'num_missed_cleavages' in row.keys():
         temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
@@ -703,7 +703,7 @@ def decoy_PSM_to_SAM(psm,row,key,enzyme,enzyme_specificity):
             #XA: Whether the peptide is well annotated
             temp_result[25]=create_XA(phit[1])
             #XM: Modification
-            temp_result[26]=create_XM(row['modifications'])
+            temp_result[26]='XM:Z:'+create_XM(row['modifications'])
             #XN: number of mis-cleavages
             if 'num_missed_cleaveges' in row.keys():
                 temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
@@ -879,8 +879,8 @@ if __name__=='__main__':
     else:
         file = proBAM_proBED.open_bed_file(directory, name)
         proBAM_proBED.create_BED_header(file, database, database_v, command_line, psm_file, comments)
-        proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,
-                              rm_duplicates,three_frame_translation,psm_file)
+        proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,
+                              rm_duplicates,three_frame_translation,id_map,None,database_v,species)
 
 
 

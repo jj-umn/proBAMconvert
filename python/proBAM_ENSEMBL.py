@@ -256,3 +256,38 @@ def create_SQ_header(database_v,species):
             SQ_string= "@SQ\tSN:chr"+str(row[0])+"\tLN:"+str(row[1])+"\tAS:"+str(row[2])+"\tSP:"+str(species)
             SQ.append(SQ_string)
     return SQ
+#
+# get Genome assembly ID
+#
+#
+# Create SQ header for SAM file (ENSEMBL) get chr location and coordinates and store them in an array
+#
+def get_genome_version(database_v,species):
+    '''
+    :param database_v: database version
+    :return: list of chromosomes with their size (from ENSEMBL)
+    '''
+    SQ=[]
+    # create connection to ensembm database
+        # create connection to ensembl database
+    if species=="arabidopsis_thaliana":
+        Genome_species=Species.getCommonName(species.replace('_',' '))
+        account=host.HostAccount(host="mysql-eg-publicsql.ebi.ac.uk",user="anonymous",passwd="",port=4157)
+        ensembl=Genome(Species=Genome_species,account=account,Release=30)
+    else:
+        Genome_species=Species.getCommonName(species.replace('_',' '))
+        ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+
+    # convert IDs
+    coord_table=ensembl.CoreDb.getTable('coord_system')
+    select_obj=[
+                coord_table.c.version,
+                ]
+
+    query = sql.select(select_obj,from_obj=[coord_table],
+                           whereclause = coord_table.c.rank==1)
+    for row in query.execute():
+        result=row[0]
+
+    version=str(species+"."+result)
+    return version

@@ -54,6 +54,7 @@ def get_PSM_mztab(psm_file):
                         if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
                                 or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
                             column_id['fdr'] = int(column_id[key])
+
                 if row[0]=="PSM":
                     if row[column_id['spectra_ref']] not in spectrum.keys():
                         spectrum[row[column_id['spectra_ref']]]=[]
@@ -76,6 +77,8 @@ def get_PSM_mztab(psm_file):
                 modified_sequence=_get_modified_sequence_(psm[column_id["sequence"]],psm[column_id["modifications"]],
                                                           unimod,psimod)
                 temp_hash['search_hit'].append({"hit_rank":_get_hit_rank_(psm,column_id),"modifications":modifications,
+                                                "calc_neutral_pep_mass":psm[column_id['exp_mass_to_charge']],
+                                                "precursor_neutral_mass": psm[column_id['calc_mass_to_charge']],
                                                 "modified_peptide":modified_sequence,
                                                 "peptide":psm[column_id['sequence']],
                                                 "massdiff":_calc_massdiff_(psm[column_id['exp_mass_to_charge']],
@@ -83,6 +86,8 @@ def get_PSM_mztab(psm_file):
                                                 "search_score":{"score":psm[column_id['search_engine_score[1]']],
                                                                 "evalue":_get_evalue_(psm,column_id)},
                                                 "proteins":proteins,"num_missed_cleavages":"*"})
+                if 'uri' in column_id.keys():
+                    temp_hash['search_hit']['uri']=psm[column_id['uri']]
             psm_hash.append(temp_hash)
     return psm_hash
 
