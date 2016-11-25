@@ -228,10 +228,10 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mztab"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
-database_v=80
+database_v=77
 # TODO Let users specify used the decoy annotation
 decoy_annotation=['REV_','DECOY_','_REVERSED']
 allowed_mismatches=0
@@ -242,9 +242,9 @@ name='PXD001524'
 three_frame_translation='N'
 allow_decoys="Y"
 rm_duplicates="N"
-probed='Y'
+probed='N'
 comments=''
-pre_picked_annotation="First"
+pre_picked_annotation="Ensembl_pr"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
@@ -391,6 +391,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
                                                                    ,allowed_mismatches)[1]
                             if len(protein_hit)==0:
+                                print transcript_hash[id_map[key]]['protein_seq']
+                                print row['peptide']
                                 write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                             else:
                                 # map peptide on protein and retrieve hit position, iterate over all hits

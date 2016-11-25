@@ -249,7 +249,6 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
             temp_map={}
             mapped_id=proBAM_biomart.id_map_ensembl("uniprot_swissprot",database_v,species,psm_protein_id)
             for row in mapped_id:
-                row=row.split("\t")
                 if row[0]!="":
                     if row[2] in temp_map.keys():
                         if temp_map[row[2]][1]<row[1]:
