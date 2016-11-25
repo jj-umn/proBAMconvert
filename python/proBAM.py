@@ -227,7 +227,7 @@ def get_input_variables():
 # FOR TESTING PURPOSES        #
 ###############################
 
-directory="/home/vladie/Desktop/proBAMconvert/output/"
+directory="/home/vladie/Desktop/"
 psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
@@ -238,7 +238,7 @@ allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
-name='PXD001524'
+name='test'
 three_frame_translation='N'
 allow_decoys="Y"
 rm_duplicates="N"
@@ -391,8 +391,6 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
                                                                    ,allowed_mismatches)[1]
                             if len(protein_hit)==0:
-                                print transcript_hash[id_map[key]]['protein_seq']
-                                print row['peptide']
                                 write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                             else:
                                 # map peptide on protein and retrieve hit position, iterate over all hits
