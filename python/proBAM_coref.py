@@ -139,6 +139,7 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     :param chr: transcript chr
     :return: genomic start position
     '''
+
     #get start exon rank:
     for exon in exons:
         if str(exon[0])==str(start_exon_rank):
@@ -198,7 +199,8 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     import sys
     sys.exit()
     '''
-
+    if offset==1 and three_frame_translation!='Y':
+        gen_pos=gen_pos-2
     return str(gen_pos)
 
 #
@@ -376,6 +378,14 @@ def get_enzyme_specificity(psm_file):
     # catch mztab file format and parse
     elif re.match('^.*\.(mztab)$', psm_file.lower()) != None:
         return proBAM_mzTab.get_enzyme_specificity_mztab(psm_file)
+#
+# translate RNA sequence
+#
+def translate_seq(sequence,strand):
+    if str(strand)=="1":
+        return standard_code.translate(sequence)
+    else:
+        return standard_code.translate(reverse_complement(sequence))
 #
 # Extract comments containing experiment information for PSM file
 #

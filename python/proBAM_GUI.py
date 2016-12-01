@@ -179,20 +179,6 @@ def _getRMDuplicates_(tk):
     menu.config(width=15)
     menu.grid(row=7,column=1)
 
-def _get3frame_(tk):
-    '''
-    :param tk: window
-    :return: selected map duplicates option
-    '''
-    global three_frame_translation
-    Label(text="3-frame translation",background="#f2f2f2",width=30,anchor=W).grid(row=8,column=0)
-    three_frame_translation=StringVar(tk)
-    three_frame_translation.set("N")
-    menu=OptionMenu(tk,three_frame_translation,"N","Y")
-    menu.config(width=15)
-    menu.grid(row=8,column=1)
-
-
 def _getAllowedMismatches_(tk):
     '''
     :param tk: window
@@ -231,15 +217,17 @@ def _get_global_arguments_():
     global sorting_order
     global psm_file
     global comments
-    global probed
     global pre_picked_annotation
+    global three_frame_translation
 
     comments=[]
     decoy_annotation=['REV_','DECOY_','_REVERSED']
     version='1.0'
+    three_frame_translation="N"
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
     probed='N'
+
     pre_picked_annotation="First"
 
 def _advanced_settings_(tk):
@@ -274,14 +262,27 @@ def _sortingOrder_(tk):
     menu.grid(row=0,column=1)
 
 def _convert_to_probed_(tk):
-    global new_probed
-    Label(tk, text='convert to proBED', background="#f2f2f2", width=30, anchor=W).grid(row=2, column=0)
-    new_probed = StringVar(tk)
-    new_probed.set('N')
+    global probed
+    Label(tk, text='convert to proBED', background="#f2f2f2", width=30, anchor=W).grid(row=8, column=0)
+    probed = StringVar(tk)
+    probed.set('N')
 
-    menu = OptionMenu(tk, new_probed, 'Y')
+    menu = OptionMenu(tk, probed, 'Y')
     menu.config(width=15)
-    menu.grid(row=2, column=1)
+    menu.grid(row=8, column=1)
+
+def _get3frame_(tk):
+    '''
+    :param tk: window
+    :return: selected map duplicates option
+    '''
+    global new_three_frame_translation
+    Label(tk,text="3-frame translation",background="#f2f2f2",width=30,anchor=W).grid(row=2,column=0)
+    new_three_frame_translation=StringVar(tk)
+    new_three_frame_translation.set("N")
+    menu=OptionMenu(tk,new_three_frame_translation,"N","Y")
+    menu.config(width=15)
+    menu.grid(row=2,column=1)
 
 def _decoyAnnotation_(tk):
     global new_decoy_annotation
@@ -313,10 +314,10 @@ def _save_and_exit_(top):
     global sorting_order
     global decoy_annotation
     global comments
-    global probed
     global pre_picked_annotation
-    if new_probed.get()=='Y':
-        probed='Y'
+    global three_frame_translation
+    if new_three_frame_translation.get()=='Y':
+        three_frame_translation='Y'
     if new_sorting_order.get()!='':
         sorting_order=new_sorting_order.get()
     if new_decoy_annotation.get() != '':
@@ -340,7 +341,7 @@ def _open_advanced_settings_():
     _sortingOrder_(top)
     _decoyAnnotation_(top)
     _comments_(top)
-    _convert_to_probed_(top)
+    _get3frame_(top)
     _pre_picked_annotation(top)
 
     # create partial save and exit for tk
@@ -369,8 +370,8 @@ def _print_arguments_():
     print 'project name:            '+str(name.get())
     print 'allow decoys:            '+allow_decoys.get()
     print 'remove duplicate PSMs:   '+rm_duplicates.get()
-    print '3-frame translation:     '+three_frame_translation.get()
-    print 'convert to proBED        '+probed
+    print '3-frame translation:     '+three_frame_translation
+    print 'convert to proBED        '+probed.get()
     print 'pre picked annotation    '+pre_picked_annotation
 
 #
@@ -398,12 +399,12 @@ def execute_proBAM(root):
     # get and print arguments
     try:
         _print_arguments_()
-        command_line = "python proBAM.py --name " + str(name) + " --mismatches " + str(
+        command_line = "python proBAM.py --name " + str(name.get()) + " --mismatches " + str(
             allowed_mismatches.get()) + " --version " + str(database_v.get()) \
                        + " --database " + str(database.get().upper()) + " --species " + str(species.get()) + " --file " + str(psm_file) + \
                        " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates.get()) + \
                        " --allow_decoys " + str(allow_decoys.get()) + " --tri_frame_translation " + \
-                       str(three_frame_translation.get()+" --pre_picked_annotation "+pre_picked_annotation)
+                       str(three_frame_translation+" --pre_picked_annotation "+pre_picked_annotation)
         print '\n'
 
 
@@ -411,7 +412,7 @@ def execute_proBAM(root):
         psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
         parse_results=proBAM_IDparser.parseID(psm_hash,species.get().replace(' ','_'),
                                            database.get().upper(),decoy_annotation,int(database_v.get()),
-                                            three_frame_translation.get(),pre_picked_annotation)
+                                            three_frame_translation,pre_picked_annotation)
 
         annotation = parse_results[1]
         psm_hash = parse_results[0]
@@ -420,13 +421,13 @@ def execute_proBAM(root):
         id_map = parse_results[2]
 
         # convert to SAM
-        if probed=='N':
+        if probed.get()=='N':
             file = proBAM.open_sam_file(directory, name.get())
             proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
                                      species.get(), command_line, psm_file,
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
-                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation.get(),psm_file,id_map,root)
+                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation,psm_file,id_map,root)
             proBAM.compute_NH_XL(directory, name.get())
             proBAM.sam_2_bam(directory, name.get())
         else:
@@ -436,7 +437,7 @@ def execute_proBAM(root):
                                             psm_file, comments)
             proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation,
                                   allowed_mismatches.get(), file, allow_decoys.get(), rm_duplicates.get(),
-                                  three_frame_translation.get(), psm_file, id_map)
+                                  three_frame_translation, psm_file, id_map)
 
         root.config(cursor="")
         print("proBAM conversion succesful")
@@ -499,7 +500,7 @@ def GUI():
     _getDatabaseVersion_(root)
     _getMapDecoy_(root)
     _getRMDuplicates_(root)
-    _get3frame_(root)
+    _convert_to_probed_(root)
     _getAllowedMismatches_(root)
     _advanced_settings_(root)
     _manual_(root)

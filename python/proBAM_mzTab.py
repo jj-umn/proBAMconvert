@@ -74,12 +74,12 @@ def get_PSM_mztab(psm_file):
                 proteins.append({"protein":psm[column_id["accession"]],'peptide_prev_aa':psm[column_id["pre"]],
                                  "peptide_next_aa":psm[column_id["post"]]})
                 modifications=_get_modifications_(psm[column_id["modifications"]])
-                modified_sequence=_get_modified_sequence_(psm[column_id["sequence"]],psm[column_id["modifications"]],
-                                                          unimod,psimod)
+                #modified_sequence=_get_modified_sequence_(psm[column_id["sequence"]],psm[column_id["modifications"]],
+                #                                          unimod,psimod)
                 temp_hash['search_hit'].append({"hit_rank":_get_hit_rank_(psm,column_id),"modifications":modifications,
                                                 "calc_neutral_pep_mass":psm[column_id['exp_mass_to_charge']],
                                                 "precursor_neutral_mass": psm[column_id['calc_mass_to_charge']],
-                                                "modified_peptide":modified_sequence,
+                                                #"modified_peptide":modified_sequence,
                                                 "peptide":psm[column_id['sequence']],
                                                 "massdiff":_calc_massdiff_(psm[column_id['exp_mass_to_charge']],
                                                                            psm[column_id['calc_mass_to_charge']]),

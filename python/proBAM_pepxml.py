@@ -108,7 +108,7 @@ def get_enzyme_specificity_pepxml(psm_file):
             elif fnmatch(line, '*fully*enzy*'):
                 return 2
                 break
-    return "*"
+    return 3
 
 #
 # extract search summary information from pepXML

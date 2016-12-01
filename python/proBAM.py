@@ -228,7 +228,7 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD000656_reprocessed.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=77
@@ -238,7 +238,7 @@ allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
-name='test'
+name='test2'
 three_frame_translation='N'
 allow_decoys="Y"
 rm_duplicates="N"
@@ -260,7 +260,7 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "species:                                       " + str(species) +"\n"+
         "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
         "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
-        "allow decoys:                                   " + str(allow_decoys)+"\n"+
+        "allow decoys:                                  " + str(allow_decoys)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates)+"\n"+
         "pre picked annotation                          " + str(pre_picked_annotation))
 
@@ -415,6 +415,16 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                                              exon_hash[transcript_hash[id_map[key]]['transcript_id']],
                                                                              transcript_hash[id_map[key]]['chr'],
                                                                              three_frame_translation)
+                                    if temp_result[0]=="index=4503" or temp_result[0]=="index=3125":
+                                        print temp_result[0]
+                                        print temp_result[3]
+                                        print "phit",phit[0]
+                                        print "strand", transcript_hash[id_map[key]]['strand']
+                                        print "5UTR offset",transcript_hash[id_map[key]]['5UTR_offset']
+                                        print "start rank",  transcript_hash[id_map[key]]['start_exon_rank']
+                                        print "peptide",row['peptide']
+                                        print "exon_hash",exon_hash[transcript_hash[id_map[key]]['transcript_id']]
+                                        print "*******************************"
                                     #MAPQ
                                     temp_result[4]=255
                                     #CIGAR
@@ -451,7 +461,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #XL: number of peptides the spectrum mapping to
                                     temp_result[13]='XL:i:*'
                                     #XP; peptide sequence
-                                    temp_result[14]='XP:Z:'+row['modified_peptide']
+                                    temp_result[14]='XP:Z:'+row['peptide']
                                     #YP: protein accession ID from the original search
                                     temp_result[15]='YP:Z:'+str(key)
                                     #XF: reading frame of the peptide
@@ -463,7 +473,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #XB: Mass error (experimental - calculated)
                                     temp_result[18]="XB:f:"+str(row['massdiff'])
                                     #XR: reference peptide sequence
-                                    temp_result[19]='XR:Z:'+row['peptide']
+                                    temp_result[19]='XR:Z:'+translate_seq(temp_result[9],
+                                                                          transcript_hash[id_map[key]]['strand'])
                                     #YB: preceding 2AA
                                     temp_result[20]="YB:Z:"+str(pre_post_aa[0])
                                     #YA: following 2AA:
@@ -551,7 +562,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #XL: number of peptides the spectrum mapping to
     temp_result[13]='XL:i:*'
     #XP; peptide sequence
-    temp_result[14]='XP:Z:'+row['modified_peptide']
+    temp_result[14]='XP:Z:'+row['peptide']
     #YP: protein accession id
     temp_result[15]="YP:Z:"+str(key)
     #XF: Reading frame of the peptide
@@ -561,7 +572,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #XB: Mass error
     temp_result[18]="XB:f:"+str(row['massdiff'])
     #XR: reference peptide sequence
-    temp_result[19]='XR:Z:'+row['peptide']
+    temp_result[19]='XR:Z:*'
     #YB: 2 AA before
     temp_result[20]='YB:Z:*'
     #YA: 2 AA after
@@ -797,15 +808,15 @@ def compute_NH_XL(directory,name):
         elif line[0]=="@":
             continue
         else:
-            if line.split("\t")[0] in xl_hash:
-                if line.split("\t")[19] not in xl_hash[line.split("\t")[0]]:
-                    xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
-            else:
-                xl_hash[line.split("\t")[0]]=[]
-                xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
             if line.split("\t")[5]=="*":
                 continue
             else:
+                if line.split("\t")[0] in xl_hash:
+                    if line.split("\t")[19] not in xl_hash[line.split("\t")[0]]:
+                        xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+                else:
+                    xl_hash[line.split("\t")[0]]=[]
+                    xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
                 if nh_key_line(line) in nh_hash:
                     if create_id_from_list([line.split('\t')[2],line.split('\t')[3],line.split('\t')[5]]) in \
                             nh_hash[nh_key_line(line)]:
@@ -824,7 +835,7 @@ def compute_NH_XL(directory,name):
         elif line[0]=="@":
             sam_file.write(line)
         elif line.split("\t")[5]=="*":
-            sam_file.write(line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]]))))
+            continue
         else:
             line=line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]])))
             line=line.replace("NH:i:*","NH:i:"+str(len(nh_hash[nh_key_line(line)])))
