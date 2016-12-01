@@ -69,11 +69,9 @@ def _get_modification_(psm_file):
                     if tag[0]=="monoisotopicMassDelta":
                         mass=tag[1].split(">")[0].replace("\"","")
                         mod.append({"position":loc,"mass":mass})
-                    if tag[0]=="accession" and ("UNIMOD" in tag[1]):
+                    if tag[0]=="accession" and ("MOD" in tag[1]):
                         tag[1]=tag[1].split(">")[0].replace("\"","")
-                        tag[1]=tag[1].split(">")[0].split(":")
-                        loc=tag[1][0]
-                        mass=tag[1][1]
+                        mass=tag[1]
                         uni_mod.append({"position":loc,"mass":mass})
             if "<Peptide " in line:
                 mod=[]

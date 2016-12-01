@@ -315,10 +315,10 @@ def create_XM(modifications):
         return'*'
     else:
         for mod in modifications:
-            if ';' in XM:
+            if XM!='':
                 XM+=';'
             XM+=str(mod['position'])
-            XM+=';'
+            XM+='-'
             XM+=str(mod['mass'])
     return XM
 

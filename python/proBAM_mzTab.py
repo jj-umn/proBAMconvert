@@ -155,9 +155,9 @@ def _get_modifications_(mods):
         db_type=mod_partitions[1].split(':')[0]
         if db_type=="UNIMOD":
             #look up avg mass in unimod dict and store modification array
-            modification.append({"position":mod_partitions[0],"mass":"UNIMOD:"+str(mod_partitions[1].split(':')[1])})
+            modification.append({"position":mod_partitions[0],"mass":str(mod_partitions[1])})
         elif db_type=="MOD":
-            modification.append({"position":mod_partitions[0],"mass":"MOD:"+str(mod_partitions[1])})
+            modification.append({"position":mod_partitions[0],"mass":str(mod_partitions[1])})
 
     return modification
 #

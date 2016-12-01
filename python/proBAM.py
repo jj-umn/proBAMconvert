@@ -228,7 +228,7 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mztab"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=77
@@ -238,7 +238,7 @@ allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
-name='test2'
+name='test'
 three_frame_translation='N'
 allow_decoys="Y"
 rm_duplicates="N"
