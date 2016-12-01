@@ -228,7 +228,7 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD000656_reprocessed.mzid"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=77
@@ -415,16 +415,6 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                                              exon_hash[transcript_hash[id_map[key]]['transcript_id']],
                                                                              transcript_hash[id_map[key]]['chr'],
                                                                              three_frame_translation)
-                                    if temp_result[0]=="index=4503" or temp_result[0]=="index=3125":
-                                        print temp_result[0]
-                                        print temp_result[3]
-                                        print "phit",phit[0]
-                                        print "strand", transcript_hash[id_map[key]]['strand']
-                                        print "5UTR offset",transcript_hash[id_map[key]]['5UTR_offset']
-                                        print "start rank",  transcript_hash[id_map[key]]['start_exon_rank']
-                                        print "peptide",row['peptide']
-                                        print "exon_hash",exon_hash[transcript_hash[id_map[key]]['transcript_id']]
-                                        print "*******************************"
                                     #MAPQ
                                     temp_result[4]=255
                                     #CIGAR
