@@ -126,11 +126,8 @@ def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,speci
         row=row.split("\t")
         try:
             psm_hash[biomart_key_hash[row[1]]]['transcript_seq']=row[0]
+            psm_hash[biomart_key_hash[row[1]]]['shift']=_calc_seq_shift_(row[0])
             psm_hash[biomart_key_hash[row[1]]]['protein_seq']=standard_code.translate(row[0])
-            #TODO what to do with "special" ensembl chromosomes: currently leave them out => bam conversion
-            #TODO considers these psms unmapped
-            #if "_" in row[2]:
-            #    print row[1],row[2]
             psm_hash[biomart_key_hash[row[1]]]['chr']=row[2]
             psm_hash[biomart_key_hash[row[1]]]['strand']=row[3]
             del row
@@ -149,11 +146,26 @@ def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,speci
                                                                    exon_hash[psm_hash[key]['transcript_id']],
                                                                    psm_hash[key]['5UTR_offset'],
                                                                    psm_hash[key]['start_exon_rank'])
+        psm_hash[key]['shift'] = _calc_seq_shift_(psm_hash[key]['transcript_seq'])
         #translate till stop codon
         psm_hash[key]['protein_seq']=standard_code.translate(psm_hash[key]
                                                                    ['transcript_seq']).partition('*')[0]
     return [psm_hash,exon_hash]
 
+#
+#
+#
+def _calc_seq_shift_(sequence):
+    i = 0
+    hit=0
+    shift = 0
+    while hit==0:
+        if sequence[i] == 'N':
+            shift += 1
+        else:
+            hit = 1
+        i += 1
+    return shift
 #
 # Retrieve protein coding sequence from transcript
 #

@@ -219,10 +219,12 @@ def _get_global_arguments_():
     global comments
     global pre_picked_annotation
     global three_frame_translation
+    global include_unmapped
 
     comments=[]
     decoy_annotation=['REV_','DECOY_','_REVERSED']
     version='1.0'
+    include_unmapped='Y'
     three_frame_translation="N"
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
@@ -294,11 +296,20 @@ def _decoyAnnotation_(tk):
 
 def _comments_(tk):
     global new_comments
-    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=4,column=0)
+    Label(tk, text='add comment(s):', pady=5, background="#f2f2f2", width=30, anchor=W).grid(row=5,column=0)
     new_comments = StringVar(tk)
     text=Text(tk)
     text.config(background="white",height=5,width=60)
-    text.grid(row=5,columnspan=2)
+    text.grid(row=6,columnspan=2)
+
+def _include_unmapped_(tk):
+    global new_include_unmapped
+    Label(tk, text="include_unmapped", background="#f2f2f2", width=30, anchor=W).grid(row=4, column=0)
+    new_include_unmapped = StringVar(tk)
+    new_include_unmapped.set("Y")
+    menu = OptionMenu(tk, new_include_unmapped, "Y", "N")
+    menu.config(width=15)
+    menu.grid(row=4, column=1)
 
 def _pre_picked_annotation(tk):
     global new_pre_picked_annotation
@@ -315,6 +326,7 @@ def _save_and_exit_(top):
     global decoy_annotation
     global comments
     global pre_picked_annotation
+    global include_unmapped
     global three_frame_translation
     if new_three_frame_translation.get()=='Y':
         three_frame_translation='Y'
@@ -326,6 +338,8 @@ def _save_and_exit_(top):
         comments=new_comments.get().split("\n")
     if new_pre_picked_annotation.get()!='':
         pre_picked_annotation=new_pre_picked_annotation.get()
+    if new_include_unmapped.get()=='N':
+        include_unmapped='N'
     top.destroy()
 
 def _open_advanced_settings_():
@@ -340,6 +354,7 @@ def _open_advanced_settings_():
     # create widgets
     _sortingOrder_(top)
     _decoyAnnotation_(top)
+    _include_unmapped_(top)
     _comments_(top)
     _get3frame_(top)
     _pre_picked_annotation(top)
@@ -373,6 +388,7 @@ def _print_arguments_():
     print '3-frame translation:     '+three_frame_translation
     print 'convert to proBED        '+probed.get()
     print 'pre picked annotation    '+pre_picked_annotation
+    print 'include unmapped PSMs    '+include_unmapped
 
 #
 # Execute proBAMconvert
@@ -404,7 +420,8 @@ def execute_proBAM(root):
                        + " --database " + str(database.get().upper()) + " --species " + str(species.get()) + " --file " + str(psm_file) + \
                        " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates.get()) + \
                        " --allow_decoys " + str(allow_decoys.get()) + " --tri_frame_translation " + \
-                       str(three_frame_translation+" --pre_picked_annotation "+pre_picked_annotation)
+                       str(three_frame_translation+" --pre_picked_annotation "+pre_picked_annotation) +\
+                       " --include_unmapped "+str(include_unmapped)
         print '\n'
 
 
@@ -428,7 +445,7 @@ def execute_proBAM(root):
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
                            file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation,psm_file,id_map,root)
-            proBAM.compute_NH_XL(directory, name.get())
+            proBAM.compute_NH_XL(directory, name.get(),include_unmapped)
             proBAM.sam_2_bam(directory, name.get())
         else:
             file = proBAM_proBED.open_bed_file(directory, name.get())

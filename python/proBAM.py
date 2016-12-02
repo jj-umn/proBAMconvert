@@ -82,6 +82,7 @@ def get_input_variables():
     global comments
     global probed
     global pre_picked_annotation
+    global include_unmapped
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
@@ -92,6 +93,7 @@ def get_input_variables():
     version=""
     database=""
     species=""
+    include_unmapped='Y'
     psm_file=""
     directory=""
     comments=[]
@@ -112,11 +114,12 @@ def get_input_variables():
     #
 
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o:i:p:",["name=","mismatches=","version=","database=",
+        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o:i:p:u:",["name=","mismatches=","version=","database=",
                                                                            "species=","file=","directory=",
                                                                            "rm_duplicates=","allow_decoys=",
                                                                            "tri_frame_translation=","decoy_annotation=",
-                                                                           "sorting_order=","probed=","pre_picked_annotation=])
+                                                                           "sorting_order=","probed=","pre_picked_annotation=",
+                                                                           "include_unmapped="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit()
@@ -159,6 +162,8 @@ def get_input_variables():
             probed=a
         if o in ('-p','--pre_picked_annotation'):
             pre_picked_annotation=a
+        if o in ('-u','--include_unmapped'):
+            include_unmapped=a
 
     #
     # Check for correct argument, output argument and parse
@@ -196,6 +201,8 @@ def get_input_variables():
         three_frame_translation="N"
     if probed!='Y':
         probed='N'
+    if include_unmapped!='N':
+        include_unmapped=Y
 
     allowed_mismatches=mismatches
     database_v=version
@@ -228,7 +235,7 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mztab"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=77
@@ -244,6 +251,7 @@ allow_decoys="Y"
 rm_duplicates="N"
 probed='N'
 comments=''
+include_unmapped='Y'
 pre_picked_annotation="Ensembl_pr"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
@@ -262,7 +270,8 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
         "allow decoys:                                  " + str(allow_decoys)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates)+"\n"+
-        "pre picked annotation                          " + str(pre_picked_annotation))
+        "pre picked annotation:                         " + str(pre_picked_annotation)+"\n"+
+        "include_unmapped:                              " + str(include_unmapped))
 
 #######################
 ### GETTERS/SETTERS ###
@@ -407,19 +416,21 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     #RNAME
                                     temp_result[2]='chr'+str(transcript_hash[id_map[key]]['chr'])
                                     #POS
-                                    temp_result[3]=calculate_genome_position(phit[0],
-                                                                             transcript_hash[id_map[key]]['strand'],
-                                                                             transcript_hash[id_map[key]]['5UTR_offset'],
-                                                                             transcript_hash[id_map[key]]['start_exon_rank'],
-                                                                             row['peptide'],
-                                                                             exon_hash[transcript_hash[id_map[key]]['transcript_id']],
-                                                                             transcript_hash[id_map[key]]['chr'],
-                                                                             three_frame_translation)
+                                    pos_and_exons=calculate_genome_position(phit[0],
+                                                             transcript_hash[id_map[key]]['strand'],
+                                                             transcript_hash[id_map[key]]['5UTR_offset'],
+                                                             transcript_hash[id_map[key]]['start_exon_rank'],
+                                                             row['peptide'],
+                                                             exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                             transcript_hash[id_map[key]]['chr'],
+                                                             three_frame_translation,
+                                                            transcript_hash[id_map[key]]['shift'])
+                                    temp_result[3]=pos_and_exons[0]
                                     #MAPQ
                                     temp_result[4]=255
                                     #CIGAR
                                     temp_result[5]=compute_cigar(temp_result[3],
-                                                                 exon_hash[transcript_hash[id_map[key]]['transcript_id']],
+                                                                 pos_and_exons[1],
                                                                  transcript_hash[id_map[key]]['strand'],row['peptide'])[0]
                                     #RNEXT
                                     temp_result[6]='*'
@@ -787,7 +798,7 @@ def sam_2_bam(directory,name):
 # function to calculate and adjust NH for every peptide
 #
 
-def compute_NH_XL(directory,name):
+def compute_NH_XL(directory,name,include_unmapped):
     sam_file=open(directory+name+'.sam','r')
     original_file = sam_file.read()
     nh_hash={}
@@ -825,7 +836,10 @@ def compute_NH_XL(directory,name):
         elif line[0]=="@":
             sam_file.write(line)
         elif line.split("\t")[5]=="*":
-            continue
+            if include_unmapped!='N':
+                sam_file.write(line)
+            else:
+                continue
         else:
             line=line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]])))
             line=line.replace("NH:i:*","NH:i:"+str(len(nh_hash[nh_key_line(line)])))
@@ -874,7 +888,7 @@ if __name__=='__main__':
         create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
         PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
                 three_frame_translation,psm_file,id_map,None)
-        compute_NH_XL(directory, name)
+        compute_NH_XL(directory, name, include_unmapped)
         sam_2_bam(directory, name)
     # convert to BED
     else:

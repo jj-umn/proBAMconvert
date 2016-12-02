@@ -68,6 +68,7 @@ def compute_cigar(gen_pos,exons,strand,peptide):
     :param peptide: peptide sequence
     :return: CIGAR string
     '''
+    temp_exons=exons
     gen_pos=int(gen_pos)
     hit=0
     cigar=''
@@ -78,12 +79,12 @@ def compute_cigar(gen_pos,exons,strand,peptide):
     #if peptide=="SCCSCCPVGCAK":
     #    debug=1
     length= int(len(peptide)*3)
-    exons=sorted(exons,key=lambda x: int(x[2]))
+    temp_exons=sorted(temp_exons,key=lambda x: int(x[2]))
     if strand=='-1':
-        adjusted_exons=list(reversed(exons))
+        adjusted_temp_exons=list(reversed(temp_exons))
     else:
-        adjusted_exons=exons
-    for exon in adjusted_exons:
+        adjusted_temp_exons=temp_exons
+    for exon in adjusted_temp_exons:
         exon=[int(numeric_string) for numeric_string in exon]
         if hit ==0:
             if gen_pos > exon[1]:
@@ -120,7 +121,7 @@ def compute_cigar(gen_pos,exons,strand,peptide):
         print strand
         print peptide
         print cigar
-        print exons
+        print temp_exons
         print gen_pos,length
     '''
     return [cigar,frame_pos]
@@ -128,7 +129,7 @@ def compute_cigar(gen_pos,exons,strand,peptide):
 # Function returns genomic position of the leftmost base
 #
 #
-def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,chr,three_frame_translation):
+def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,chr,three_frame_translation,shift):
     '''
     :param phit: location of peptide hit
     :param strand: transcript strand
@@ -139,9 +140,10 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     :param chr: transcript chr
     :return: genomic start position
     '''
-
+    temp_offset=offset-shift
+    temp_exons=exons
     #get start exon rank:
-    for exon in exons:
+    for exon in temp_exons:
         if str(exon[0])==str(start_exon_rank):
             print exon[2]
     if three_frame_translation=='Y':
@@ -151,10 +153,10 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
             #start_exon_rank=0
         else:
             tr_pos=(phit)+(len(peptide)*3)-1
-            #start_exon_rank=len(exons)+1
+            #start_exon_rank=len(temp_exons)+1
             pointer=0
         gen_pos=0
-        offset=0
+        temp_offset=0
         start_exon_rank=1
 
     else:
@@ -165,17 +167,17 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
         pointer=1
         gen_pos=0
 
-    # iterate over exons till peptide position is encoutered
-    exons=sorted(exons,key=lambda x: int(x[2]))
-    for exon in exons:
+    # iterate over temp_exons till peptide position is encoutered
+    temp_exons=sorted(temp_exons,key=lambda x: int(x[2]))
+    for exon in temp_exons:
         exon=[int(numeric_string) for numeric_string in exon]
         if exon[2]<start_exon_rank:
             continue
         elif exon[2]==start_exon_rank:
             if strand=='1':
-                exon[0]=exon[0]+offset
+                exon[0]=exon[0]+temp_offset
             else:
-                exon[1]=exon[1]-offset
+                exon[1]=exon[1]-temp_offset
         if tr_pos>((exon[1]-exon[0])+pointer):
             pointer=pointer+(exon[1]-exon[0]+1)
             continue
@@ -191,7 +193,7 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     '''
     print '*************************************************'
     print 'test:',start_exon_rank,phit,strand
-    print pointer,tr_pos, offset
+    print pointer,tr_pos, temp_offset
     #print remember_exon
     print gen_pos,peptide,strand,chr
     print '*************************************************'
@@ -199,9 +201,8 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     import sys
     sys.exit()
     '''
-    if offset==1 and three_frame_translation!='Y':
-        gen_pos=gen_pos-2
-    return str(gen_pos)
+
+    return [str(gen_pos),temp_exons]
 
 #
 #Function that maps peptide on the corresponding protein, alowing mismatches ( as specified)
