@@ -247,17 +247,16 @@ version='1.0'
 sorting_order='unknown'
 name='test'
 three_frame_translation='N'
-allow_decoys="Y"
-rm_duplicates="N"
+rm_duplicates="Y"
 probed='N'
 comments=''
-include_unmapped='Y'
-pre_picked_annotation="Ensembl_pr"
+include_unmapped='N'
+pre_picked_annotation="first"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
               " --directory "+str(directory)+" --rm_duplicates "+str(rm_duplicates)+\
-              " --allow_decoys "+str(allow_decoys)+" --tri_frame_translation "+str(three_frame_translation+
+              " --tri_frame_translation "+str(three_frame_translation+
               "--pre_picked_annotation "+str(pre_picked_annotation))
 
 # ouput variables
@@ -268,7 +267,6 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "species:                                       " + str(species) +"\n"+
         "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
         "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
-        "allow decoys:                                  " + str(allow_decoys)+"\n"+
         "remove duplicates:                             " + str(rm_duplicates)+"\n"+
         "pre picked annotation:                         " + str(pre_picked_annotation)+"\n"+
         "include_unmapped:                              " + str(include_unmapped))
@@ -310,7 +308,7 @@ def open_sam_file(directory,name):
 #
 # Convert PSM to SAM
 #
-def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
+def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,rm_duplicates,
             three_frame_translation,psm_file,id_map,gui):
     '''
     :param psm_hash: dictionairy of psm files
@@ -378,140 +376,146 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                     if decoy==0:
                         key=row['proteins'][p]['protein']
                         # Filter out PSM where transcript sequences were not found/ non-existent
-                        if (key not in id_map.keys()) or (id_map[key] not in transcript_hash.keys()):
+                        if (key not in id_map.keys()):
                             write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                         # transcript not on an canonical transcript
                         # TODO do this nicer by fetching canonical chr
-                        elif len(transcript_hash[id_map[key]]['chr']) > 4:
-                            write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity), file)
                         else:
-                            if three_frame_translation=="Y":
-                                protein_hit=map_peptide_to_protein_3frame(row['peptide'],
-                                                                          transcript_hash[id_map[key]]['transcript_seq'],
-                                                                          allowed_mismatches,
-                                                                          transcript_hash[id_map[key]]['strand'])[0]
-                                pre_post_aa=map_peptide_to_protein_3frame(row['peptide'],
-                                                                          transcript_hash[id_map[key]]['transcript_seq'],
-                                                                          allowed_mismatches,
-                                                                          transcript_hash[id_map[key]]['strand'])[1]
-                            else:
-                                protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
-                                                                   ,allowed_mismatches)[0]
-                                pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
-                                                                   ,allowed_mismatches)[1]
-                            if len(protein_hit)==0:
-                                write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
-                            else:
-                                # map peptide on protein and retrieve hit position, iterate over all hits
-                                for phit in protein_hit:
-                                    temp_result=[None]*32
-                                    #
-                                    # Mandatory columns adapted from SAM/BAM format
-                                    #
-                                    #QNAME
-                                    temp_result[0]=psm['spectrum']
-                                    #FLAG
-                                    temp_result[1]=calculate_FLAG(transcript_hash[id_map[key]]['strand'],row['hit_rank'],
-                                                                  decoy)
-                                    #RNAME
-                                    temp_result[2]='chr'+str(transcript_hash[id_map[key]]['chr'])
-                                    #POS
-                                    pos_and_exons=calculate_genome_position(phit[0],
-                                                             transcript_hash[id_map[key]]['strand'],
-                                                             transcript_hash[id_map[key]]['5UTR_offset'],
-                                                             transcript_hash[id_map[key]]['start_exon_rank'],
-                                                             row['peptide'],
-                                                             exon_hash[transcript_hash[id_map[key]]['transcript_id']],
-                                                             transcript_hash[id_map[key]]['chr'],
-                                                             three_frame_translation,
-                                                            transcript_hash[id_map[key]]['shift'])
-                                    temp_result[3]=pos_and_exons[0]
-                                    #MAPQ
-                                    temp_result[4]=255
-                                    #CIGAR
-                                    temp_result[5]=compute_cigar(temp_result[3],
-                                                                 pos_and_exons[1],
-                                                                 transcript_hash[id_map[key]]['strand'],row['peptide'])[0]
-                                    #RNEXT
-                                    temp_result[6]='*'
-                                    #PNEXT
-                                    temp_result[7]=0
-                                    #TLEN
-                                    temp_result[8]=0
-                                    #SEQ
-                                    if three_frame_translation=='Y':
-                                        phit_loc=phit[0]
-                                    else:
-                                        phit_loc=phit[0]*3
-                                    if int(transcript_hash[id_map[key]]['strand'])==1:
-                                        temp_result[9]=str(transcript_hash[id_map[key]]['transcript_seq']\
-                                                   [phit_loc:(phit_loc+(len(row['peptide'])*3))])
-                                    else:
-                                        temp_result[9]=reverse_complement(str(transcript_hash[id_map[key]]['transcript_seq']\
-                                                   [phit_loc:(phit_loc+(len(row['peptide'])*3))]))
-                                    #QUAL
-                                    temp_result[10]='*'
-                                    #
-                                    #Mandatory proteomics specific columns added to the proBam format
-                                    #
-                                    #NH: number of genomic location the peptide mapping to
-                                    temp_result[11]='NH:i:*'
-                                    #XO: uniqueness of peptide mapping
-                                    #todo figure this one out
-                                    temp_result[12]='XO:Z:*'
-                                    #XL: number of peptides the spectrum mapping to
-                                    temp_result[13]='XL:i:*'
-                                    #XP; peptide sequence
-                                    temp_result[14]='XP:Z:'+row['peptide']
-                                    #YP: protein accession ID from the original search
-                                    temp_result[15]='YP:Z:'+str(key)
-                                    #XF: reading frame of the peptide
-                                    temp_result[16]='XF:Z:'+compute_cigar(temp_result[3],
-                                                                 exon_hash[transcript_hash[id_map[key]]['transcript_id']],
-                                                                 transcript_hash[id_map[key]]['strand'],row['peptide'])[1]
-                                    #XI: peptide intensity
-                                    temp_result[17]="XI:f:*"
-                                    #XB: Mass error (experimental - calculated)
-                                    temp_result[18]="XB:f:"+str(row['massdiff'])
-                                    #XR: reference peptide sequence
-                                    temp_result[19]='XR:Z:'+translate_seq(temp_result[9],
-                                                                          transcript_hash[id_map[key]]['strand'])
-                                    #YB: preceding 2AA
-                                    temp_result[20]="YB:Z:"+str(pre_post_aa[0])
-                                    #YA: following 2AA:
-                                    temp_result[21]="YA:Z:"+str(pre_post_aa[1])
-                                    #XS: PSM score
-                                    temp_result[22]="XS:f:"+str(row['search_score']['score'])
-                                    #XQ: PSM-Qvalue
-                                    temp_result[23]='XQ:f:'+str(row['search_score']['evalue'])
-                                    #XC: Peptide charge
-                                    temp_result[24]='XC:i:'+str(psm['assumed_charge'])
-                                    #XA: Whether the peptide is well annotated
-                                    temp_result[25]=create_XA(phit[1])
-                                    #XM: Modification
-                                    temp_result[26]='XM:Z:'+create_XM(row['modifications'])
-                                    #XN: number of mis-cleavages
-                                    if 'num_missed_cleaveges' in row.keys():
-                                        temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
-                                    else:
-                                        temp_result[27]='XN:i:0'
-                                    #XT: non/semi/tryptic
-                                    temp_result[28]="XT:i:"+str(enzyme_specificity)
-                                    #XE: enzyme used
-                                    temp_result[29]="XE:i:"+str(enzyme)
-                                    #XG: Petide type
-                                    temp_result[30]=create_XG(phit[1])
-                                    #XU: petide URL
-                                    temp_result[31]="XU:Z:*"
-                                    # remove duplicates if rm_duplicates=Y
-                                    if rm_duplicates=="Y":
-                                        dup_key= str(temp_result[9])+"_"+\
-                                                          str(str(temp_result[0])+"_"+temp_result[2])+"_"+str(temp_result[3])
-                                        if dup_key not in dup.keys():
-                                            dup[dup_key]=1
+                            for transcript_id in id_map[key]:
+                                if (transcript_id not in transcript_hash.keys() or
+                                            len(transcript_hash[transcript_id]['chr']) > 4):
+                                    write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity),
+                                              file)
+                                    continue
+                                elif three_frame_translation=="Y":
+                                    protein_hit=map_peptide_to_protein_3frame(row['peptide'],
+                                                                              transcript_hash[transcript_id]['transcript_seq'],
+                                                                              allowed_mismatches,
+                                                                              transcript_hash[transcript_id]['strand'])[0]
+                                    pre_post_aa=map_peptide_to_protein_3frame(row['peptide'],
+                                                                              transcript_hash[transcript_id]['transcript_seq'],
+                                                                              allowed_mismatches,
+                                                                              transcript_hash[transcript_id]['strand'])[1]
+                                else:
+                                    protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
+                                                                       ,allowed_mismatches)[0]
+                                    pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
+                                                                       ,allowed_mismatches)[1]
+                                if len(protein_hit)==0:
+                                    write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
+                                else:
+                                    # map peptide on protein and retrieve hit position, iterate over all hits
+                                    for phit in protein_hit:
+                                        temp_result=[None]*33
+                                        #
+                                        # Mandatory columns adapted from SAM/BAM format
+                                        #
+                                        #QNAME
+                                        temp_result[0]=psm['spectrum']
+                                        #FLAG
+                                        temp_result[1]=calculate_FLAG(transcript_hash[transcript_id]['strand'],row['hit_rank'],
+                                                                      decoy)
+                                        #RNAME
+                                        temp_result[2]='chr'+str(transcript_hash[transcript_id]['chr'])
+                                        #POS
+                                        pos_and_exons=calculate_genome_position(phit[0],
+                                                                 transcript_hash[transcript_id]['strand'],
+                                                                 transcript_hash[transcript_id]['5UTR_offset'],
+                                                                 transcript_hash[transcript_id]['start_exon_rank'],
+                                                                 row['peptide'],
+                                                                 exon_hash[transcript_hash[transcript_id]['transcript_id']],
+                                                                 transcript_hash[transcript_id]['chr'],
+                                                                 three_frame_translation,
+                                                                transcript_hash[transcript_id]['shift'])
+                                        temp_result[3]=pos_and_exons[0]
+                                        #MAPQ
+                                        temp_result[4]=255
+                                        #CIGAR
+                                        temp_result[5]=compute_cigar(temp_result[3],
+                                                                     pos_and_exons[1],
+                                                                     transcript_hash[transcript_id]['strand'],row['peptide'])[0]
+                                        #RNEXT
+                                        temp_result[6]='*'
+                                        #PNEXT
+                                        temp_result[7]=0
+                                        #TLEN
+                                        temp_result[8]=0
+                                        #SEQ
+                                        if three_frame_translation=='Y':
+                                            phit_loc=phit[0]
+                                        else:
+                                            phit_loc=phit[0]*3
+                                        if int(transcript_hash[transcript_id]['strand'])==1:
+                                            temp_result[9]=str(transcript_hash[transcript_id]['transcript_seq']\
+                                                       [phit_loc:(phit_loc+(len(row['peptide'])*3))])
+                                        else:
+                                            temp_result[9]=reverse_complement(str(transcript_hash[transcript_id]['transcript_seq']\
+                                                       [phit_loc:(phit_loc+(len(row['peptide'])*3))]))
+                                        #QUAL
+                                        temp_result[10]='*'
+                                        #
+                                        #Mandatory proteomics specific columns added to the proBam format
+                                        #
+                                        #NH: number of genomic location the peptide mapping to
+                                        temp_result[11]='NH:i:*'
+                                        #XO: uniqueness of peptide mapping
+                                        #todo figure this one out
+                                        temp_result[12]='XO:Z:*'
+                                        #XL: number of peptides the spectrum mapping to
+                                        temp_result[13]='XL:i:*'
+                                        #XP; peptide sequence
+                                        temp_result[14]='XP:Z:'+row['peptide']
+                                        #YP: protein accession ID from the original search
+                                        temp_result[15]='YP:Z:'+str(key)
+                                        #XF: reading frame of the peptide
+                                        temp_result[16]='XF:Z:'+compute_cigar(temp_result[3],
+                                                                     exon_hash[transcript_hash[transcript_id]['transcript_id']],
+                                                                     transcript_hash[transcript_id]['strand'],row['peptide'])[1]
+                                        #XI: peptide intensity
+                                        temp_result[17]="XI:f:*"
+                                        #XB: Mass error (experimental - calculated)
+                                        temp_result[18]="XB:f:"+str(row['massdiff'])
+                                        #XR: reference peptide sequence
+                                        temp_result[19]='XR:Z:'+translate_seq(temp_result[9],
+                                                                              transcript_hash[transcript_id]['strand'])
+                                        #YB: preceding 2AA
+                                        temp_result[20]="YB:Z:"+str(pre_post_aa[0])
+                                        #YA: following 2AA:
+                                        temp_result[21]="YA:Z:"+str(pre_post_aa[1])
+                                        #XS: PSM score
+                                        temp_result[22]="XS:f:"+str(row['search_score']['score'])
+                                        #XQ: PSM-Qvalue
+                                        temp_result[23]='XQ:f:'+str(row['search_score']['evalue'])
+                                        #XC: Peptide charge
+                                        temp_result[24]='XC:i:'+str(psm['assumed_charge'])
+                                        #XA: Whether the peptide is well annotated
+                                        temp_result[25]=create_XA(phit[1])
+                                        #XM: Modification
+                                        temp_result[26]='XM:Z:'+create_XM(row['modifications'])
+                                        #XN: number of mis-cleavages
+                                        if 'num_missed_cleaveges' in row.keys():
+                                            temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
+                                        else:
+                                            temp_result[27]='XN:i:0'
+                                        #XT: non/semi/tryptic
+                                        temp_result[28]="XT:i:"+str(enzyme_specificity)
+                                        #XE: enzyme used
+                                        temp_result[29]="XE:i:"+str(enzyme)
+                                        #XG: Petide type
+                                        temp_result[30]=create_XG(phit[1])
+                                        #XU: petide URL
+                                        temp_result[31]="XU:Z:*"
+                                        # ZA additional field specifiying the transcript/protein id used for mapping
+                                        temp_result[32] = "ZA:Z:" + str(transcript_id)
+                                        # remove duplicates if rm_duplicates=Y
+                                        if rm_duplicates=="Y":
+                                            dup_key= str(temp_result[9])+"_"+\
+                                                              str(str(temp_result[0])+"_"+temp_result[2])+"_"+str(temp_result[3])
+                                            if dup_key not in dup.keys():
+                                                dup[dup_key]=1
+                                                write_psm(temp_result,file)
+                                        else:
                                             write_psm(temp_result,file)
-                                    else:
-                                        write_psm(temp_result,file)
     print "]"
     file.close()
 
@@ -527,7 +531,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     :return: sam of unnanotated PSM
     '''
     decoy=int(decoy)
-    temp_result=[None]*32
+    temp_result=[None]*33
     #
     # Mandatory columns adapted from SAM/BAM format
     #
@@ -604,6 +608,8 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
         temp_result[30]="XG:Z:U"
     #XU
     temp_result[31]="XU:Z:*"
+    #ZA additional field specifiying the transcript/protein id used for mapping
+    temp_result[32] = "ZA:Z:*"
     return temp_result
 
 #
@@ -886,7 +892,7 @@ if __name__=='__main__':
     if probed=='N':
         file = open_sam_file(directory, name)
         create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
-        PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,allow_decoys,rm_duplicates,
+        PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,rm_duplicates,
                 three_frame_translation,psm_file,id_map,None)
         compute_NH_XL(directory, name, include_unmapped)
         sam_2_bam(directory, name)

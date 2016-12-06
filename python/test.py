@@ -94,4 +94,6 @@ map_peptide_to_protein_3frame(' I L L Q E I G T','ATTTAGGACCAATAAGTCTTAATTGGTTTG
                                'TTAG ',0,-1)
 '''
 import re
-print re.match("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}",'Q8IW75') is not None
+#([OPQ][0-9][A-Z0-9]{3}[0-9])|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9]{1,2}
+test=re.compile("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9][A-Z][A-Z0-9]{2}[0-9]")
+print re.findall(test,"A0A000")

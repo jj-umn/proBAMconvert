@@ -77,7 +77,6 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species,three_frame_
                 translation_table.c.start_exon_id,
                 ]
     from_obj=translation_table.join(transcript_table,transcript_table.c.transcript_id==translation_table.c.transcript_id)
-
     if mode=='protein':
         id=1
         query = sql.select(select_obj,from_obj=[from_obj],

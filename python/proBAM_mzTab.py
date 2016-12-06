@@ -18,6 +18,7 @@
 __author__ = 'vladie'
 
 import csv
+import re
 from pyteomics import mass,xml
 
 #
@@ -138,7 +139,10 @@ def _get_modifications_(mods):
     :return: list of modification dictionairies for this peptide
     '''
     # seperate modification string into list of modifications
+    mods=mods.replace(', ',';')
     mod_list=mods.split(',')
+    for i in range(0,len(mod_list)):
+        mod_list[i].replace(';',', ')
 
     # create variable to store results
     modification=[]
@@ -149,14 +153,13 @@ def _get_modifications_(mods):
             break
 
         #partition unimod variable, separating position from unimod ID
-        mod_partitions=mod.split("-")
+        mod_partitions=mod.split('-',1)
 
         #calculate mass
-        db_type=mod_partitions[1].split(':')[0]
-        if db_type=="UNIMOD":
+        if "UNIMOD" in mod_partitions[1].upper() :
             #look up avg mass in unimod dict and store modification array
             modification.append({"position":mod_partitions[0],"mass":str(mod_partitions[1])})
-        elif db_type=="MOD":
+        elif "MOD" in mod_partitions[1].upper():
             modification.append({"position":mod_partitions[0],"mass":str(mod_partitions[1])})
 
     return modification

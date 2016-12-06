@@ -269,7 +269,7 @@ def _convert_to_probed_(tk):
     probed = StringVar(tk)
     probed.set('N')
 
-    menu = OptionMenu(tk, probed, 'Y')
+    menu = OptionMenu(tk, probed, 'Y','N')
     menu.config(width=15)
     menu.grid(row=8, column=1)
 
@@ -317,7 +317,7 @@ def _pre_picked_annotation(tk):
     new_pre_picked_annotation= StringVar(tk)
     new_pre_picked_annotation.set('First')
 
-    menu=OptionMenu(tk,new_pre_picked_annotation,'First','Ensembl_tr', 'Ensembl_pr','UniProt')
+    menu=OptionMenu(tk,new_pre_picked_annotation,'First','Ensembl_tr', 'Ensembl_pr','UniProt_ACC','UniProt_Entry')
     menu.config(width=15)
     menu.grid(row=3,column=1)
 
@@ -383,7 +383,6 @@ def _print_arguments_():
     print 'proBAMconvert version:   '+str(version)
     print 'sorting order:           '+ sorting_order
     print 'project name:            '+str(name.get())
-    print 'allow decoys:            '+allow_decoys.get()
     print 'remove duplicate PSMs:   '+rm_duplicates.get()
     print '3-frame translation:     '+three_frame_translation
     print 'convert to proBED        '+probed.get()
@@ -419,7 +418,7 @@ def execute_proBAM(root):
             allowed_mismatches.get()) + " --version " + str(database_v.get()) \
                        + " --database " + str(database.get().upper()) + " --species " + str(species.get()) + " --file " + str(psm_file) + \
                        " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates.get()) + \
-                       " --allow_decoys " + str(allow_decoys.get()) + " --tri_frame_translation " + \
+                       " --tri_frame_translation " + \
                        str(three_frame_translation+" --pre_picked_annotation "+pre_picked_annotation) +\
                        " --include_unmapped "+str(include_unmapped)
         print '\n'
@@ -438,23 +437,22 @@ def execute_proBAM(root):
         id_map = parse_results[2]
 
         # convert to SAM
-        if probed.get()=='N':
+        if probed.get()!='Y':
             file = proBAM.open_sam_file(directory, name.get())
             proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
                                      species.get(), command_line, psm_file,
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
-                           file, allow_decoys.get(), rm_duplicates.get(),three_frame_translation,psm_file,id_map,root)
+                           file, rm_duplicates.get(),three_frame_translation,psm_file,id_map,root)
             proBAM.compute_NH_XL(directory, name.get(),include_unmapped)
             proBAM.sam_2_bam(directory, name.get())
         else:
             file = proBAM_proBED.open_bed_file(directory, name.get())
-            proBAM_proBED.create_BED_header(file, version, database.get().upper(), sorting_order.get(), database_v.get(),
-                                            species.get(), command_line,
+            proBAM_proBED.create_BED_header(file, database.get().upper(), database_v.get(), command_line,
                                             psm_file, comments)
             proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation,
-                                  allowed_mismatches.get(), file, allow_decoys.get(), rm_duplicates.get(),
-                                  three_frame_translation, psm_file, id_map)
+                                  int(allowed_mismatches.get()), file, rm_duplicates.get(),
+                                  three_frame_translation, id_map, root, database_v.get(), species.get())
 
         root.config(cursor="")
         print("proBAM conversion succesful")
@@ -515,7 +513,6 @@ def GUI():
     species=_getSpecies_(root)
     _getDatabase_(root)
     _getDatabaseVersion_(root)
-    _getMapDecoy_(root)
     _getRMDuplicates_(root)
     _convert_to_probed_(root)
     _getAllowedMismatches_(root)

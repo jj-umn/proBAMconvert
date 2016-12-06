@@ -96,126 +96,133 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
 
                     if decoy==0:
                         key=row['proteins'][p]['protein']
-                        if key in unique_name_generator:
-                            unique_name_generator[key]+=1
-                        else:
-                            unique_name_generator[key]=0
                         # Filter out PSM where transcript sequences were not found/ non-existent
-                        if (key not in id_map.keys()) or (id_map[key] not in transcript_hash.keys()):
+                        if (key not in id_map.keys()):
                             continue
-                        # transcript not on an canonical transcript
-                        # TODO do this nicer by fetching canonical chr
-                        elif len(transcript_hash[id_map[key]]['chr']) > 4:
-                            continue
-                        else:
-                            if three_frame_translation=="Y":
-                                protein_hit=map_peptide_to_protein_3frame(row['peptide'],
-                                                                          transcript_hash[id_map[key]]['transcript_seq'],
-                                                                          allowed_mismatches,
-                                                                          transcript_hash[id_map[key]]['strand'])[0]
-                                pre_post_aa=map_peptide_to_protein_3frame(row['peptide'],
-                                                                          transcript_hash[id_map[key]]['transcript_seq'],
-                                                                          allowed_mismatches,
-                                                                          transcript_hash[id_map[key]]['strand'])[1]
-                            else:
-                                protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
-                                                                   ,allowed_mismatches)[0]
-                                pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[id_map[key]]['protein_seq']
-                                                                   ,allowed_mismatches)[1]
-                            if len(protein_hit)==0:
+                        for transcript_id in id_map[key]:
+                            # transcript not on an canonical transcript
+                            # TODO do this nicer by fetching canonical chr
+                            if transcript_id not in transcript_hash.keys() or len(transcript_hash[transcript_id]['chr']) > 4 :
                                 continue
                             else:
-                                # map peptide on protein and retrieve hit position, iterate over all hits
-                                for phit in protein_hit:
-                                    temp_result=[None]*25
-                                    genome_position=calculate_genome_position(phit[0],
-                                                                             transcript_hash[id_map[key]]['strand'],
-                                                                             transcript_hash[id_map[key]]['5UTR_offset'],
-                                                                             transcript_hash[id_map[key]]['start_exon_rank'],
-                                                                             row['peptide'],
-                                                                             exon_hash[transcript_hash[id_map[key]]['transcript_id']],
-                                                                             transcript_hash[id_map[key]]['chr'],
-                                                                             three_frame_translation)
-                                    CIGAR=compute_cigar(genome_position,
-                                                                 exon_hash[transcript_hash[id_map[key]]['transcript_id']],
-                                                                 transcript_hash[id_map[key]]['strand'],row['peptide'])[0]
-                                    #
-                                    # Mandatory columns adapted from BED format
-                                    #
-                                    #chrom
-                                    temp_result[0]=str(transcript_hash[id_map[key]]['chr'])
-                                    #chromStart
-                                    temp_result[1]=str(int(genome_position)-1)
-                                    #chromStop
-                                    temp_result[2] = str(int(_calculate_stop_(temp_result[1],CIGAR)))
-                                    #unique protein accession
-                                    temp_result[3]=str(key)+"_"+str(unique_name_generator[key])
-                                    #score
-                                    temp_result[4]=1000
-                                    #strand
-                                    if str(transcript_hash[id_map[key]]['strand'])==str(1):
-                                        temp_result[5]="+"
-                                    else:
-                                        temp_result[5]="-"
-                                    #chromstart
-                                    temp_result[6]=temp_result[1]
-                                    #chromstop
-                                    temp_result[7]=temp_result[2]
-                                    #reserved
-                                    temp_result[8]=0
-                                    #blockcount
-                                    temp_result[9]=str(len(CIGAR.split('M'))-1)
-                                    #list of black sizes
-                                    temp_result[10]=_get_block_sizes_(CIGAR)
-                                    #list of block starts
-                                    temp_result[11]=_get_block_starts_(CIGAR)
-                                    #
-                                    #Mandatory proteomics specific columns added to the proBED format
-                                    #
-                                    #protein accession
-                                    temp_result[12]=key
-                                    #peptide sequence
-                                    temp_result[13]=row['peptide']
-                                    #uniqueness
-                                    temp_result[14]="."
-                                    #genome reference version
-                                    temp_result[15]=genome_version
-                                    #psm score
-                                    temp_result[16]=str(row['search_score']['score'])
-                                    #fdr
-                                    temp_result[17]=str(row['search_score']['evalue'])
-                                    #modifications
-                                    if row['modifications']!=[]:
-                                        temp_result[18]=create_XM(row['modifications'])
-                                    else:
-                                        temp_result[18]="."
-                                    #charge
-                                    temp_result[19]=psm['assumed_charge']
-                                    #exp-mass_to-charge
-                                    temp_result[20]=row['calc_neutral_pep_mass']
-                                    #calc-mass-to-charge
-                                    temp_result[21]=row['precursor_neutral_mass']
-                                    #rank
-                                    temp_result[22]=row['hit_rank']
-                                    #dataset ID
-                                    temp_result[23]=psm['spectrum']
-                                    #url
-                                    if 'uri' in row.keys():
-                                        temp_result[24]=row['uri']
-                                    else:
-                                        temp_result[24]='.'
-                                    for i in range(0, len(temp_result)):
-                                        if temp_result[i] == '*' or temp_result[i] == [] or temp_result[i]=='null':
-                                            temp_result[i] == "."
-                                    # remove duplicates if rm_duplicates=Y
-                                    if rm_duplicates=="Y":
-                                        dup_key= str(temp_result[0])+"_"+\
-                                                          str(temp_result[1])+"_"+str(temp_result[13])
-                                        if dup_key not in dup.keys():
-                                            dup[dup_key]=1
+                                #create unique ID for every key-transcript pair
+                                if key in unique_name_generator:
+                                    unique_name_generator[key] += 1
+                                else:
+                                    unique_name_generator[key] = 0
+                                if three_frame_translation=="Y":
+                                    protein_hit=map_peptide_to_protein_3frame(row['peptide'],
+                                                                              transcript_hash[transcript_id]['transcript_seq'],
+                                                                              allowed_mismatches,
+                                                                              transcript_hash[transcript_id]['strand'])[0]
+                                    pre_post_aa=map_peptide_to_protein_3frame(row['peptide'],
+                                                                              transcript_hash[transcript_id]['transcript_seq'],
+                                                                              allowed_mismatches,
+                                                                              transcript_hash[transcript_id]['strand'])[1]
+                                else:
+                                    protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
+                                                                       ,allowed_mismatches)[0]
+                                    pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
+                                                                       ,allowed_mismatches)[1]
+                                if len(protein_hit)==0:
+                                    continue
+                                else:
+                                    # map peptide on protein and retrieve hit position, iterate over all hits
+                                    for phit in protein_hit:
+                                        temp_result=[None]*26
+                                        pos_and_exons=calculate_genome_position(phit[0],
+                                                             transcript_hash[transcript_id]['strand'],
+                                                             transcript_hash[transcript_id]['5UTR_offset'],
+                                                             transcript_hash[transcript_id]['start_exon_rank'],
+                                                             row['peptide'],
+                                                             exon_hash[transcript_hash[transcript_id]['transcript_id']],
+                                                             transcript_hash[transcript_id]['chr'],
+                                                             three_frame_translation,
+                                                             transcript_hash[transcript_id]['shift'])
+
+                                        genome_position=pos_and_exons[0]
+
+                                        CIGAR=compute_cigar(genome_position,pos_and_exons[1],
+                                                            transcript_hash[transcript_id]['strand'],row['peptide'])[0]
+                                        #
+                                        # Mandatory columns adapted from BED format
+                                        #
+                                        #chrom
+                                        temp_result[0]=str(transcript_hash[transcript_id]['chr'])
+                                        #chromStart
+                                        temp_result[1]=str(int(genome_position)-1)
+                                        #chromStop
+                                        temp_result[2] = str(int(_calculate_stop_(temp_result[1],CIGAR)))
+                                        #unique protein accession
+                                        temp_result[3]=str(key)+"_"+str(unique_name_generator[key])
+                                        #score
+                                        temp_result[4]=1000
+                                        #strand
+                                        if str(transcript_hash[transcript_id]['strand'])==str(1):
+                                            temp_result[5]="+"
+                                        else:
+                                            temp_result[5]="-"
+                                        #chromstart
+                                        temp_result[6]=temp_result[1]
+                                        #chromstop
+                                        temp_result[7]=temp_result[2]
+                                        #reserved
+                                        temp_result[8]=0
+                                        #blockcount
+                                        temp_result[9]=str(len(CIGAR.split('M'))-1)
+                                        #list of black sizes
+                                        temp_result[10]=_get_block_sizes_(CIGAR)
+                                        #list of block starts
+                                        temp_result[11]=_get_block_starts_(CIGAR)
+                                        #
+                                        #Mandatory proteomics specific columns added to the proBED format
+                                        #
+                                        #protein accession
+                                        temp_result[12]=key
+                                        #peptide sequence
+                                        temp_result[13]=row['peptide']
+                                        #uniqueness
+                                        temp_result[14]="."
+                                        #genome reference version
+                                        temp_result[15]=genome_version
+                                        #psm score
+                                        temp_result[16]=str(row['search_score']['score'])
+                                        #fdr
+                                        temp_result[17]=str(row['search_score']['evalue'])
+                                        #modifications
+                                        if row['modifications']!=[]:
+                                            temp_result[18]=create_XM(row['modifications'])
+                                        else:
+                                            temp_result[18]="."
+                                        #charge
+                                        temp_result[19]=psm['assumed_charge']
+                                        #exp-mass_to-charge
+                                        temp_result[20]=row['calc_neutral_pep_mass']
+                                        #calc-mass-to-charge
+                                        temp_result[21]=row['precursor_neutral_mass']
+                                        #rank
+                                        temp_result[22]=row['hit_rank']
+                                        #dataset ID
+                                        temp_result[23]=psm['spectrum']
+                                        #url
+                                        if 'uri' in row.keys():
+                                            temp_result[24]=row['uri']
+                                        else:
+                                            temp_result[24]='.'
+                                        for i in range(0, len(temp_result)):
+                                            if temp_result[i] == '*' or temp_result[i] == [] or temp_result[i]=='null':
+                                                temp_result[i] == "."
+                                        # row for used transcript_id
+                                        temp_result[25]=transcript_id
+                                        # remove duplicates if rm_duplicates=Y
+                                        if rm_duplicates=="Y":
+                                            dup_key= str(temp_result[0])+"_"+\
+                                                              str(temp_result[1])+"_"+str(temp_result[13])
+                                            if dup_key not in dup.keys():
+                                                dup[dup_key]=1
+                                                _write_psm_(temp_result,file)
+                                        else:
                                             _write_psm_(temp_result,file)
-                                    else:
-                                        _write_psm_(temp_result,file)
     print "]"
     file.close()
 #

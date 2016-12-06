@@ -166,7 +166,6 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
     :param psm_protein_id: list of IDs to be converted
     :return: BioMart results
     '''
-
     # If species is in plantsDB, execute plants adjusted function
     if species=="arabidopsis_thaliana":
         result=id_map_ensembl_plants(to_annotation,version,species,psm_protein_id)
