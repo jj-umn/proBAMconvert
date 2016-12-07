@@ -93,7 +93,24 @@ map_peptide_to_protein_3frame(' I L L Q E I G T','ATTTAGGACCAATAAGTCTTAATTGGTTTG
                                'CCAATAATATTCAAAGAGCAAGGGCTGACTCTGCCGCTGTACCAATCTCCTGTAAAAGAATTAGATAAATTCAAATTAGAC' \
                                'TTAG ',0,-1)
 '''
-import re
+#import re
 #([OPQ][0-9][A-Z0-9]{3}[0-9])|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9]{1,2}
-test=re.compile("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9][A-Z][A-Z0-9]{2}[0-9]")
-print re.findall(test,"A0A000")
+#test=re.compile("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9][A-Z][A-Z0-9]{2}[0-9]")
+#print re.findall(test,"A0A000")
+
+import urllib,urllib2
+
+def get_updated_entry_name(name):
+    url = 'http://www.uniprot.org/uniprot/'+name+'.tab'
+
+    params = {
+    'columns':'id',
+    }
+
+    data = urllib.urlencode(params)
+    request = urllib2.Request(url, data)
+    contact = "volodimir.olexiouk@ugent.be" # Please set your email address here to help us debug in case of problems.
+    request.add_header('User-Agent', 'Python %s' % contact)
+    response = urllib2.urlopen(request)
+    page = response.read(200000)
+    return page.split("\n")[1]

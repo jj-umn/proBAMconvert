@@ -20,6 +20,7 @@ import proBAM_ENSEMBL
 import proBAM_biomart
 import re
 import sys
+import urllib,urllib2
 from fnmatch import fnmatch
 
 #
@@ -169,7 +170,7 @@ def _update_protein_accession_(accession,decoy_annotation,regex):
     if any(decoy in accession.upper().replace('-','_') for decoy in decoy_annotation):
         is_decoy=1
     new_accession=re.findall(regex,accession)
-    if new_accession!=[]:
+    if new_accession!=[] and new_accession[0]!="P00000":
         accession= new_accession[0]
         if is_decoy==1:
             accession="DECOY_"+accession
@@ -258,10 +259,52 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
             for id in psm_protein_id:
                 if re.findall("[A-Z0-9]{1,10}" + "_" + _get_uniprot_postfix_(species), id) != []:
                     to_translate.append(re.findall("[A-Z0-9]{1,10}" + "_" + _get_uniprot_postfix_(species), id)[0])
-            map.update(u.mapping('ACC+ID','ENSEMBL_TRS_ID',to_translate))
+
+            # map uniprot_entries to up-to-date accession
+            to_translate=list(set(to_translate))
+            accession_update_hash=u.mapping('ACC+ID','ACC',to_translate)
+            for entry in to_translate:
+                if entry not in accession_update_hash:
+                    try:
+                        accession_update_hash[entry]=[get_updated_entry_name(entry)]
+                    except urllib2.HTTPError:
+                        pass
+            to_translate=[]
+
+            #map accession to Ensembl transcript
+            for value in accession_update_hash.values():
+                to_translate+=value
+            to_translate=list(set(to_translate))
+
+            # remap Ensembl transcript to uniprot entries
+            temp_map=u.mapping('ACC','ENSEMBL_TRS_ID',to_translate)
+            for accession in accession_update_hash:
+                for i in accession_update_hash[accession]:
+                    if i in temp_map:
+                        if accession in map:
+                            map[accession]+=temp_map[i]
+                        else:
+                            map[accession]=temp_map[i]
 
         if from_annotation=="ENSEMBL":
             for id in psm_protein_id:
                 map[id]=[id]
     return map
+#
+# given a UniProt entry name, retrieves the stable accession ID
+#
+def get_updated_entry_name(name):
+    url = 'http://www.uniprot.org/uniprot/'+name+'.tab'
+
+    params = {
+    'columns':'id',
+    }
+
+    data = urllib.urlencode(params)
+    request = urllib2.Request(url, data)
+    contact = "volodimir.olexiouk@ugent.be" # Please set your email address here to help us debug in case of problems.
+    request.add_header('User-Agent', 'Python %s' % contact)
+    response = urllib2.urlopen(request)
+    page = response.read(200000)
+    return page.split("\n")[1]
 
