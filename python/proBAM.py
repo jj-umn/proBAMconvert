@@ -234,13 +234,13 @@ def get_input_variables():
 # FOR TESTING PURPOSES        #
 ###############################
 
-directory="/home/vladie/Desktop/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD001524_reprocessed.mzid"
+directory="/home/vladie/Desktop/proBAMconvert/output/"
+psm_file="/home/vladie/Desktop/PXD001524.mztab"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=77
 # TODO Let users specify used the decoy annotation
-decoy_annotation=['REV_','DECOY_','_REVERSED']
+decoy_annotation=['REV_','DECOY_','_REVERSED','REVERSED_','_DECOY']
 allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
@@ -250,8 +250,8 @@ three_frame_translation='N'
 rm_duplicates="Y"
 probed='N'
 comments=''
-include_unmapped='N'
-pre_picked_annotation="first"
+include_unmapped='Y'
+pre_picked_annotation="First"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
@@ -347,31 +347,18 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                 for p in range(0,len(row['proteins'])):
                     decoy=0
                     # convert decoys with decoy-specific convertor
-                    for d in decoy_annotation:
-                        if d in row['proteins'][p]['protein'].upper():
-                            decoy=1
-                            key=row['proteins'][p]['protein'].upper().split(d)[1]
-                            if (key not in id_map.keys()) or (id_map[key] not in transcript_hash.keys()):
-
-                                temp_result= decoy_PSM_to_SAM(psm,row,key,enzyme,enzyme_specificity)
-                                if rm_duplicates=="Y":
-                                    dup_key= str(temp_result[0])+"_"+str(temp_result[9])+"_"+str(temp_result[2])\
-                                             +"_"+str(temp_result[3])
-                                    if dup_key not in dup.keys():
-                                        dup[dup_key]=1
-                                        write_psm(temp_result,file)
-                                else:
-                                    write_psm(temp_result,file)
-                            else:
-                                temp_result=unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity)
-                                if rm_duplicates=="Y":
-                                    dup_key= str(str(temp_result[0])+"_"+temp_result[9])+"_"+str(temp_result[2])\
-                                             +"_"+str(temp_result[3])
-                                    if dup_key not in dup.keys():
-                                        dup[dup_key]=1
-                                        write_psm(temp_result,file)
-                                else:
-                                    write_psm(temp_result,file)
+                    if 'DECOY_' in row['proteins'][p]['protein'].upper():
+                        key = row['proteins'][p]['protein']
+                        decoy=1
+                        temp_result= decoy_PSM_to_SAM(psm,row,key,enzyme,enzyme_specificity)
+                        if rm_duplicates=="Y":
+                            dup_key= str(temp_result[0])+"_"+str(temp_result[9])+"_"+str(temp_result[2])\
+                                     +"_"+str(temp_result[3])
+                            if dup_key not in dup.keys():
+                                dup[dup_key]=1
+                                write_psm(temp_result,file)
+                        else:
+                            write_psm(temp_result,file)
 
                     if decoy==0:
                         key=row['proteins'][p]['protein']
@@ -381,11 +368,10 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                         # transcript not on an canonical transcript
                         # TODO do this nicer by fetching canonical chr
                         else:
+                            is_hit=0
                             for transcript_id in id_map[key]:
                                 if (transcript_id not in transcript_hash.keys() or
                                             len(transcript_hash[transcript_id]['chr']) > 4):
-                                    write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity),
-                                              file)
                                     continue
                                 elif three_frame_translation=="Y":
                                     protein_hit=map_peptide_to_protein_3frame(row['peptide'],
@@ -402,10 +388,11 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
                                                                        ,allowed_mismatches)[1]
                                 if len(protein_hit)==0:
-                                    write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
+                                    continue
                                 else:
                                     # map peptide on protein and retrieve hit position, iterate over all hits
                                     for phit in protein_hit:
+                                        is_hit=1
                                         temp_result=[None]*33
                                         #
                                         # Mandatory columns adapted from SAM/BAM format
@@ -516,6 +503,9 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                 write_psm(temp_result,file)
                                         else:
                                             write_psm(temp_result,file)
+                            if is_hit==0:
+                                write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity),
+                                          file)
     print "]"
     file.close()
 
@@ -879,9 +869,9 @@ if __name__=='__main__':
 
     # hash PSM_DATA and define variables
     psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
+
     parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation
                                           ,pre_picked_annotation)
-
     annotation=parse_results[1]
     psm_hash=parse_results[0]
     transcript_hash=annotation[0]

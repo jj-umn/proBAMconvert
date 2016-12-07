@@ -222,7 +222,7 @@ def _get_global_arguments_():
     global include_unmapped
 
     comments=[]
-    decoy_annotation=['REV_','DECOY_','_REVERSED']
+    decoy_annotation=['REV_','DECOY_','_REVERSED','REVERSED_','_DECOY']
     version='1.0'
     include_unmapped='Y'
     three_frame_translation="N"
@@ -291,7 +291,7 @@ def _decoyAnnotation_(tk):
     Label(tk, text='decoy annotation(s)', background="#f2f2f2", width=30, anchor=W).grid(row=1, column=0)
     new_decoy_annotation= StringVar(tk)
     entry=Entry(tk, textvariable=new_decoy_annotation)
-    new_decoy_annotation.set('REV_,DECOY_,_REVERSED')
+    new_decoy_annotation.set('REV_,DECOY_,_REVERSED,REVERSED_,_DECOY')
     entry.grid(row=1,column=1)
 
 def _comments_(tk):

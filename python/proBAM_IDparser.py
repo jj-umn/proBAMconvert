@@ -77,8 +77,7 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
                         hit=0
                         for d in decoy_annotation:
                             if d in psm['proteins'][i]['protein'].upper():
-                                ID=psm['proteins'][i]['protein'].upper().strip(d)
-                                protein_ID.append(ID)
+                                continue
                                 hit=1
                         if hit==0:
                             protein_ID.append(psm['proteins'][i]['protein'])
@@ -135,17 +134,17 @@ def _find_annotation_(accession,species,pre_picked_annotation):
         print "Identified ENSEMBL transcript IDs"
         result=[1,"ENSEMBL_TR",ensembl_prefix[0][0]+"[0-9]*"]
         found=1
-    elif re.findall(ensembl_prefix[0][1]+"[0-9]*",accession)!=[] and \
+    if re.findall(ensembl_prefix[0][1]+"[0-9]*",accession)!=[] and \
         (pre_picked_annotation == "First" or pre_picked_annotation == "Ensembl_pr") and found==0 :
         print "Identified ENSEMBL protein IDs"
         result=[1,"ENSEMBL_PR",ensembl_prefix[0][1]+"[0-9]*"]
         found=1
-    elif (pre_picked_annotation=="First" or pre_picked_annotation=="UniProt_ACC") and found==0:
+    if (pre_picked_annotation=="First" or pre_picked_annotation=="UniProt_ACC") and found==0:
         if re.findall("[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}",accession)!=[]:
             print " Identified UNIPROT IDs"
             result=[1,"UNIPROT","[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9][A-Z][A-Z0-9]{2}[0-9]"]
             found=1
-    elif (pre_picked_annotation == "First" or pre_picked_annotation == "UniProt_Entry") and found == 0:
+    if (pre_picked_annotation == "First" or pre_picked_annotation == "UniProt_Entry") and found == 0:
         if re.findall("[A-Z0-9]{1,10}"+"_"+_get_uniprot_postfix_(species),accession)!=[]:
             print "Identified UNIPROT Entry Names"
             result=[1,"UNIPROT_ENTRY","[A-Z0-9]{1,10}"+"_"+_get_uniprot_postfix_(species)]
@@ -166,7 +165,8 @@ def _update_protein_accession_(accession,decoy_annotation,regex):
     :return: protein ID
     '''
     is_decoy=0
-    if any(decoy in accession.upper() for decoy in decoy_annotation):
+
+    if any(decoy in accession.upper().replace('-','_') for decoy in decoy_annotation):
         is_decoy=1
     new_accession=re.findall(regex,accession)
     if new_accession!=[]:
