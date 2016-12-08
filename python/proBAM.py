@@ -235,10 +235,10 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/PXD001524.mztab"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD000652.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
-database_v=77
+database_v=85
 # TODO Let users specify used the decoy annotation
 decoy_annotation=['REV_','DECOY_','_REVERSED','REVERSED_','_DECOY']
 allowed_mismatches=0

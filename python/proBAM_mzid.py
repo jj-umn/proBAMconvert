@@ -35,6 +35,8 @@ def get_PSM_mzid(psm_file):
         psm_hash=[]
         accession_hash=_get_accessions_(psm_file)
         mod_hash=_get_modification_(psm_file)
+
+
         for row in PSM:
             temp_hash={"assumed_charge":row['SpectrumIdentificationItem'][0]['chargeState'],"spectrum":row['spectrumID'],"search_hit":[]}
             for psm in row["SpectrumIdentificationItem"]:
@@ -61,14 +63,19 @@ def _get_modification_(psm_file):
         for line in f:
             count += 1
             if hit==1:
+                loc=0
+                mass=0
                 temp_line = line.split(" ")
                 for tag in temp_line:
                     tag = tag.split("=")
                     if tag[0]=="location":
                         loc=tag[1].split(">")[0].replace("\"","")
+                        if mass!=0:
+                            mod.append({"position": loc, "mass": mass})
                     if tag[0]=="monoisotopicMassDelta":
                         mass=tag[1].split(">")[0].replace("\"","")
-                        mod.append({"position":loc,"mass":mass})
+                        if loc!=0:
+                            mod.append({"position":loc,"mass":mass})
                     if tag[0]=="accession" and ("MOD" in tag[1]):
                         tag[1]=tag[1].split(">")[0].replace("\"","")
                         mass=tag[1]
@@ -94,22 +101,20 @@ def _get_modification_(psm_file):
 def _get_accessions_(psm_file):
     accession_hash={}
     with open(psm_file,'r') as f:
-        count=0
         for line in f:
-            count+=1
             if "<PeptideEvidence" in line:
-                line=line.split(" ")
-                for tag in line:
-                    tag=tag.split("=")
-                    if tag[0]=="dBSequence_ref":
-                        ref=tag[1].replace("\"","")
-                    elif tag[0]=="id":
-                        id=tag[1].replace("\"","")
-                if '>' in id:
-                    id=id.replace('>','')
-                if '\n' in id:
-                    id=id.replace('\n', '')
-                accession_hash[id]=ref
+                if "id" in line and "dBSequence_ref" in line:
+                    line=line.replace("/>",'')
+                    line=line.replace(">",'')
+                    line=line.replace('\n','')
+                    line=line.split(" ")
+                    for tag in line:
+                        tag=tag.split("=")
+                        if tag[0]=="dBSequence_ref":
+                            ref=tag[1].replace("\"","")
+                        elif tag[0]=="id":
+                            id=tag[1].replace("\"","")
+                    accession_hash[id]=ref
     return accession_hash
 
 def _cal_massdiff_(calc_mass,exp_mass):
