@@ -235,7 +235,7 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/PXD000652.mzid"
+psm_file="/home/vladie/Desktop/proBAMconvert/example_files/test.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=85
@@ -250,7 +250,7 @@ three_frame_translation='N'
 rm_duplicates="Y"
 probed='N'
 comments=''
-include_unmapped='Y'
+include_unmapped='N'
 pre_picked_annotation="First"
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
@@ -340,7 +340,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
         if gui!=None:
             gui.update()
         # convert unmapped PSMs with their own converter
-        if 'search_hit' not in psm.keys():
+        if 'search_hit' not in psm:
             continue
         else:
             for row in psm['search_hit']:
@@ -354,7 +354,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                         if rm_duplicates=="Y":
                             dup_key= str(temp_result[0])+"_"+str(temp_result[9])+"_"+str(temp_result[2])\
                                      +"_"+str(temp_result[3])
-                            if dup_key not in dup.keys():
+                            if dup_key not in dup:
                                 dup[dup_key]=1
                                 write_psm(temp_result,file)
                         else:
@@ -363,35 +363,35 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                     if decoy==0:
                         key=row['proteins'][p]['protein']
                         # Filter out PSM where transcript sequences were not found/ non-existent
-                        if (key not in id_map.keys()):
+                        if (key not in id_map):
                             write_psm(unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity),file)
                         # transcript not on an canonical transcript
                         # TODO do this nicer by fetching canonical chr
                         else:
                             is_hit=0
                             for transcript_id in id_map[key]:
-                                if (transcript_id not in transcript_hash.keys() or
+                                if (transcript_id not in transcript_hash or
                                             len(transcript_hash[transcript_id]['chr']) > 4):
                                     continue
                                 elif three_frame_translation=="Y":
-                                    protein_hit=map_peptide_to_protein_3frame(row['peptide'],
-                                                                              transcript_hash[transcript_id]['transcript_seq'],
-                                                                              allowed_mismatches,
-                                                                              transcript_hash[transcript_id]['strand'])[0]
-                                    pre_post_aa=map_peptide_to_protein_3frame(row['peptide'],
+                                    temp_hit=map_peptide_to_protein_3frame(row['peptide'],
                                                                               transcript_hash[transcript_id]['transcript_seq'],
                                                                               allowed_mismatches,
                                                                               transcript_hash[transcript_id]['strand'])[1]
+                                    protein_hit=temp_hit[0]
+                                    pre_post_aa=temp_hit[1]
                                 else:
-                                    protein_hit=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
-                                                                       ,allowed_mismatches)[0]
-                                    pre_post_aa=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
-                                                                       ,allowed_mismatches)[1]
+                                    temp_hit=map_peptide_to_protein(row['peptide'],transcript_hash[transcript_id]['protein_seq']
+                                                                       ,allowed_mismatches)
+                                    protein_hit=temp_hit[0]
+                                    pre_post_aa=temp_hit[1]
+
                                 if len(protein_hit)==0:
                                     continue
                                 else:
                                     # map peptide on protein and retrieve hit position, iterate over all hits
                                     for phit in protein_hit:
+                                        start_time = time.time()
                                         is_hit=1
                                         temp_result=[None]*33
                                         #
@@ -480,7 +480,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                         #XM: Modification
                                         temp_result[26]='XM:Z:'+create_XM(row['modifications'])
                                         #XN: number of mis-cleavages
-                                        if 'num_missed_cleaveges' in row.keys():
+                                        if 'num_missed_cleaveges' in row:
                                             temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
                                         else:
                                             temp_result[27]='XN:i:0'
@@ -498,7 +498,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                         if rm_duplicates=="Y":
                                             dup_key= str(temp_result[9])+"_"+\
                                                               str(str(temp_result[0])+"_"+temp_result[2])+"_"+str(temp_result[3])
-                                            if dup_key not in dup.keys():
+                                            if dup_key not in dup:
                                                 dup[dup_key]=1
                                                 write_psm(temp_result,file)
                                         else:
@@ -506,6 +506,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                             if is_hit==0:
                                 write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity),
                                           file)
+
     print "]"
     file.close()
 
@@ -583,7 +584,7 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #XM: Modification
     temp_result[26]='XM:Z:'+create_XM(row['modifications'])
     #XN: number of mis-cleavages
-    if 'num_missed_cleavages' in row.keys():
+    if 'num_missed_cleavages' in row:
         temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
     else:
         temp_result[27]='XN:i:*'

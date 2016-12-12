@@ -36,8 +36,8 @@ def _get_ensembl_archive_(version,species):
     else:
         d={}
         #TODO www.ensembl.org biomart is not working, fix this for later when it's back online
-        #d[87]="www.ensembl.org"
-        d[86]="oct2016.archive.ensembl.org"
+        d[87]="www.ensembl.org"
+        d[86]="http://oct2016.archive.ensembl.org"
         d[85]="jul2016.archive.ensembl.org"
         d[84]="mar2016.archive.ensembl.org"
         d[83]="dec2015.archive.ensembl.org"
@@ -171,7 +171,6 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
         result=id_map_ensembl_plants(to_annotation,version,species,psm_protein_id)
         return result
     else:
-
         #create connection
         query_string=_id_in_xml_query_(psm_protein_id)
         version=_get_ensembl_archive_(version,species)
@@ -186,22 +185,26 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
         biomart.add_attribute_to_xml("ensembl_transcript_id")
         biomart.add_attribute_to_xml("transcript_start")
         biomart.add_attribute_to_xml("transcript_end")
-        biomart.add_attribute_to_xml("uniprot_sptrembl")
+        biomart.add_attribute_to_xml(to_annotation)
         attributes=biomart.attributes(dataset)
 
         #execute query
         xml_query=biomart.get_xml()
         tmp_result=biomart.query(xml_query)
+
+        if len(tmp_result)==1:
+            print "ERROR: could not convert ID's trough BioMart, " \
+                  "Please check whether Ensembl version/species were correctly supplied"
         tmp_result=tmp_result.split("\n")
 
         result=[]
-        for i in tmp_result:
-            i=i.split("\t")
-            if i[0]!="":
-                result.append([i[0],(int(i[2])-int(i[1])),i[3]])
-            else:
-                result.append(i)
-
+        if tmp_result!=[]:
+            for i in tmp_result:
+                i=i.split("\t")
+                if i[0]!="":
+                    result.append([i[0],(int(i[2])-int(i[1])),i[3]])
+                else:
+                    result.append(i)
         return result
 
 #

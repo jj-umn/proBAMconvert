@@ -35,16 +35,20 @@ def get_PSM_mzid(psm_file):
         psm_hash=[]
         accession_hash=_get_accessions_(psm_file)
         mod_hash=_get_modification_(psm_file)
-
-
+        spectraData_ref={}
+        c=0
         for row in PSM:
+            if 'spectraData_ref' in row:
+                if row['spectraData_ref'] not in spectraData_ref:
+                    spectraData_ref[row['spectraData_ref']]=c
+                    c+=1
+                row['spectrumID']='ms_run['+str(spectraData_ref[row['spectraData_ref']])+']:'+row['spectrumID']
             temp_hash={"assumed_charge":row['SpectrumIdentificationItem'][0]['chargeState'],"spectrum":row['spectrumID'],"search_hit":[]}
             for psm in row["SpectrumIdentificationItem"]:
                 proteins=[]
                 massdiff=_cal_massdiff_(psm['experimentalMassToCharge'],psm['calculatedMassToCharge'])
                 for protein in psm["PeptideEvidenceRef"]:
                     proteins.append({"protein":accession_hash[protein['peptideEvidence_ref']]})
-
                 temp_hash['search_hit'].append({"hit_rank":psm['rank'],"modifications":mod_hash[psm['peptide_ref']],
                                                 "calc_neutral_pep_mass": psm['experimentalMassToCharge'],
                                                 "precursor_neutral_mass": psm['calculatedMassToCharge'],
@@ -58,14 +62,31 @@ def get_PSM_mzid(psm_file):
 def _get_modification_(psm_file):
     mod_hash = {}
     with open(psm_file, 'r') as f:
-        count = 0
         hit=0
         for line in f:
-            count += 1
+
+            if "<Peptide " in line:
+                mod=[]
+                uni_mod=[]
+                temp_line = line.replace('><', ' ')
+                temp_line = temp_line.replace("/>", '')
+                temp_line = temp_line.replace(">", '')
+                temp_line = temp_line.replace('\n', '')
+                temp_line = temp_line.replace('\r','')
+                temp_line = temp_line.split(" ")
+                for tag in temp_line:
+                    tag = tag.split("=")
+                    if tag[0] == "id":
+                        id = tag[1].split(">")[0].replace("\"", "")
+                hit=1
+
             if hit==1:
                 loc=0
                 mass=0
-                temp_line = line.split(" ")
+                temp_line = line.replace("/>", '')
+                temp_line = temp_line.replace(">", '')
+                temp_line = temp_line.replace('\n', '')
+                temp_line = temp_line.split(" ")
                 for tag in temp_line:
                     tag = tag.split("=")
                     if tag[0]=="location":
@@ -80,16 +101,8 @@ def _get_modification_(psm_file):
                         tag[1]=tag[1].split(">")[0].replace("\"","")
                         mass=tag[1]
                         uni_mod.append({"position":loc,"mass":mass})
-            if "<Peptide " in line:
-                mod=[]
-                uni_mod=[]
-                temp_line = line.split(" ")
-                for tag in temp_line:
-                    tag = tag.split("=")
-                    if tag[0] == "id":
-                        id = tag[1].split(">")[0].replace("\"", "")
-                hit=1
-            elif "</Peptide>" in line:
+
+            if "/Peptide>" in line:
                 if uni_mod==[]:
                     mod_hash[id]=mod
                 else:
@@ -254,6 +267,6 @@ def extract_comments_from_mzid(psm_file):
     return comments
 
 #get_PSM_mzid("/home/vladie/Desktop/proBAMconvert/PeptideShaker.mzid")
-#get_PSM_mzid("/home/vladie/Desktop/proBAMconvert/PXD000656_reprocessed.mzid")
+#get_PSM_mzid("/home/vladie/Desktop/proBAMconvert/PXD000652.mzid")
 #get_PSM_mzid("/home/vladie/Desktop/mESC_ignolia/NtermCofr/NtermCofr.mzid")
 #get_PSM_mzid("/home/vladie/Desktop/mESC_ignolia/NtermCofr/NtermCofr2.mzid")

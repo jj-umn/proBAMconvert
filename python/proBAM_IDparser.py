@@ -76,10 +76,8 @@ def parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_tr
                         psm['proteins'][i]['protein']=_update_protein_accession_(psm['proteins'][i]['protein'],
                                                                                decoy_annotation,find_result[2])
                         hit=0
-                        for d in decoy_annotation:
-                            if d in psm['proteins'][i]['protein'].upper():
-                                continue
-                                hit=1
+                        if 'DECOY_' in psm['proteins'][i]['protein'].upper():
+                            hit=1
                         if hit==0:
                             protein_ID.append(psm['proteins'][i]['protein'])
 
@@ -236,12 +234,13 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
     '''
     #psm_hash.reset()
     new_psm_protein_id=[]
-
+    psm_protein_id=list(set(psm_protein_id))
     print "Commencing ID conversion from "+str(from_annotation)+" to "+str(to_annotation)
     map={}
     if to_annotation=="ENSEMBL":
         if from_annotation=="UNIPROT":
             temp_map={}
+            #map uniprot/swissprot
             mapped_id=proBAM_biomart.id_map_ensembl("uniprot_swissprot",database_v,species,psm_protein_id)
             for row in mapped_id:
                 if row[0]!="":
@@ -251,6 +250,23 @@ def _id_map_(from_annotation,to_annotation,psm_protein_id,psm_hash,species,decoy
                         temp_map[row[2]]=[row]
             for key in temp_map:
                 map[key]=temp_map[key][0]
+
+            #map remaining on uniprot/trembl
+            unmapped_id_for_trmbl=[]
+            for id in psm_protein_id:
+                if id not in map.keys():
+                    unmapped_id_for_trmbl.append(id)
+            if unmapped_id_for_trmbl!=[]:
+                mapped_id=proBAM_biomart.id_map_ensembl("uniprot_sptrembl",database_v,species,unmapped_id_for_trmbl)
+                if mapped_id!=[]:
+                    for row in mapped_id:
+                        if row[0]!="":
+                            if row[2] in temp_map.keys():
+                                    temp_map[row[2]].append(row)
+                            else:
+                                temp_map[row[2]]=[row]
+                    for key in temp_map:
+                        map[key]=temp_map[key][0]
 
         if from_annotation=="UNIPROT_ENTRY":
             from bioservices import UniProt

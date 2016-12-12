@@ -34,10 +34,8 @@ def get_PSM_mztab(psm_file):
     unimod=_unimod_parser_()
     psimod=_psimod_xml_parser_()
     with open(psm_file,'rU') as csvfile:
-
         #read mztab PSM rows
         mztab=csv.reader(csvfile,delimiter='\t')
-
         #hash to store variables in processable format
         psm_hash=[]
 
@@ -45,8 +43,9 @@ def get_PSM_mztab(psm_file):
         spectrum={}
         column_id={}
         for row in mztab:
+            psh_passed=False
             if row!="" and row!="\n" and len(row)!=0:
-                if row[0]=="PSH":
+                if psh_passed==False and row[0]=="PSH":
                     for pos in range(0,len(row)):
                         column_id[row[pos]]=pos
                     for key in column_id.keys():
@@ -55,14 +54,13 @@ def get_PSM_mztab(psm_file):
                         if "xcorr" in key.lower() or 'expectation' in key.lower() or 'confidence' in key.lower() \
                                 or "e_value" in key.lower().replace("-","_") or 'evalue' in key.lower() or 'fdr' in key.lower():
                             column_id['fdr'] = int(column_id[key])
+                    psh_passed=True
 
                 if row[0]=="PSM":
-                    if row[column_id['spectra_ref']] not in spectrum.keys():
-                        spectrum[row[column_id['spectra_ref']]]=[]
-                        spectrum[row[column_id['spectra_ref']]].append(row)
+                    if row[column_id['spectra_ref']] not in spectrum:
+                        spectrum[row[column_id['spectra_ref']]]=[row]
                     else:
                         spectrum[row[column_id['spectra_ref']]].append(row)
-
         #iterate over all spectrum to store in processable dictionairy
         for key in spectrum.keys():
             if 'charge' in column_id:
