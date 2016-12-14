@@ -297,7 +297,7 @@ def calculate_FLAG(strand,rank,unmapped):
     FLAG=0
     if strand==-1:
         FLAG=FLAG+16
-    if str(rank)!=str(1):
+    if str(rank)!=str(1) and rank!='*' and rank!=[] and rank!="":
         FLAG=FLAG+256
     if unmapped==1:
         FLAG=FLAG+4

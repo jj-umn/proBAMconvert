@@ -235,7 +235,7 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/proBAMconvert/example_files/test.mzid"
+psm_file="/home/vladie/Desktop/PXD001390.mztab"
 species="homo_sapiens"
 database='ENSEMBL'
 database_v=85
