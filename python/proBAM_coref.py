@@ -105,6 +105,12 @@ def compute_cigar(gen_pos,exons,strand,peptide):
                     continue
         if hit!=0:
             cigar+=(str((exon[0]-prev_exon_end-1))+'N')
+            if '-' in cigar:
+                print strand
+                print peptide
+                print cigar
+                print adjusted_temp_exons
+                print gen_pos, length
             if (exon[0]+(length)-1)>exon[1]+1:
                 cigar=cigar+(str((exon[1]-exon[0]+1))+'M')
                 length=length-(exon[1]-exon[0]+1)
@@ -356,6 +362,10 @@ def create_XG(hamming_distance):
 # get enzyme
 #
 def get_enzyme(psm_file):
+    '''
+    :param psm_file: psm file
+    :return: enzyme used in the psm file
+    '''
     #catch mzid
     if re.match('^.*\.(mzid)$',psm_file.lower())!=None:
         return proBAM_mzid.get_enzyme_mzid(psm_file)
@@ -367,9 +377,13 @@ def get_enzyme(psm_file):
         return proBAM_mzTab.get_enzyme_mztab(psm_file)
 
 #
-# get enzume specificity
+# get enzyme specificity
 #
 def get_enzyme_specificity(psm_file):
+    '''
+    :param psm_file: psm file
+    :return: enzyme specificity extracted from psm_file
+    '''
     # catch mzid
     if re.match('^.*\.(mzid)$', psm_file.lower()) != None:
         return proBAM_mzid.get_enzyme_specificity_mzid(psm_file)
@@ -383,6 +397,11 @@ def get_enzyme_specificity(psm_file):
 # translate RNA sequence
 #
 def translate_seq(sequence,strand):
+    '''
+    :param sequence: DNA sequence
+    :param strand: strand of DNA sequence
+    :return: translated DNA sequence
+    '''
     if str(strand)=="1":
         return standard_code.translate(sequence)
     else:
@@ -391,6 +410,10 @@ def translate_seq(sequence,strand):
 # Extract comments containing experiment information for PSM file
 #
 def extract_comments(psm_file):
+    '''
+    :param psm_file: psm file
+    :return: returns an array of extracted comments from the original psm file
+    '''
     if re.match('^.*\.(mzid)$', psm_file.lower()) != None:
         return proBAM_mzid.extract_comments_from_mzid(psm_file)
     # catch pepxml file format and parse
@@ -399,3 +422,29 @@ def extract_comments(psm_file):
     # catch mztab file format and parse
     elif re.match('^.*\.(mztab)$', psm_file.lower()) != None:
         return proBAM_mzTab.extract_comments_from_mztab(psm_file)
+#
+# Give a list, create a identifiers where elements from the list are concatenated by '_'
+#
+def create_id_from_list(list):
+    '''
+    :param list: list of elements (strings)
+    :return: identifiers
+    '''
+    id=""
+    for i in list:
+        if id == "":
+            id+=str(i)
+        else:
+            id+="_"+str(i)
+    return id
+#
+# for a line creates a unique genomic location key for this peptide
+#
+def nh_key_line(line):
+    '''
+    :param line:a line from a SAM file
+    :return: key (string)
+    '''
+    line=line.split("\t")
+    key=line[19]+"_"+line[0]
+    return key

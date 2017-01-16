@@ -89,14 +89,28 @@ def get_PSM_mztab(psm_file):
                     temp_hash['search_hit']['uri']=psm[column_id['uri']]
             psm_hash.append(temp_hash)
     return psm_hash
-
+#
+# retrieve hit rank for a psm
+#
 def _get_hit_rank_(psm,column_id):
+    '''
+    :param psm: psm
+    :param column_id:column number of rank
+    :return: rank
+    '''
     if 'rank' in column_id.keys():
         return psm[column_id['rank']]
     else:
         return "*"
-
+#
+# retrieve evalue from psm
+#
 def _get_evalue_(psm,column_id):
+    '''
+    :param psm: psm
+    :param column_id: column number for evalue
+    :return: evalue
+    '''
     if 'fdr' in column_id.keys():
         return psm[column_id['fdr']]
     else:
@@ -105,6 +119,11 @@ def _get_evalue_(psm,column_id):
 # calculates massdiff
 #
 def _calc_massdiff_(exp_mass,calc_mass):
+    '''
+    :param exp_mass: experimental mass
+    :param calc_mass: calculated mass
+    :return: mass difference
+    '''
     if exp_mass=="" and calc_mass=="":
         return "*"
     else:

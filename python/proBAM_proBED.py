@@ -229,6 +229,11 @@ def PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
 # calculate stop
 #
 def _calculate_stop_(pos,flag):
+    '''
+    :param pos: psm position
+    :param flag: flag of psm
+    :return: stop position
+    '''
     length=0
     number_parsing=''
     for char in flag:
@@ -239,9 +244,13 @@ def _calculate_stop_(pos,flag):
             number_parsing=''
     return int(pos)+length
 #
-# get block sized
+# get block sized (using the flag calculated block sizes)
 #
 def _get_block_sizes_(flag):
+    '''
+    :param flag: psm flag
+    :return: blocksize
+    '''
     block_sizes=''
     number_parsing=''
     for char in flag:
@@ -257,9 +266,13 @@ def _get_block_sizes_(flag):
             number_parsing=''
     return block_sizes
 #
-# Get block starts
+# Get block starts (using the flag calculates block start sites)
 #
 def _get_block_starts_(flag):
+    '''
+    :param flag: flag
+    :return: block starts
+    '''
     sizes=flag.split('M')
     start_sizes=str(0)
     number_parsing=''

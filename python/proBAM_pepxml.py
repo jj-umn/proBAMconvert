@@ -20,6 +20,10 @@ from fnmatch import fnmatch
 # Reads pepXML and stores variables in an hash
 #
 def get_PSM_pepxml(psm_file):
+    '''
+    :param psm_file: psm file
+    :return: dictionairy of psms
+    '''
     PSM = []
     PEP = pepxml.read(psm_file, read_schema=False, iterative=True)
     # count = 0
@@ -41,6 +45,10 @@ def get_PSM_pepxml(psm_file):
 # Attempts to extract enzyme information from the pepXML file
 #
 def get_enzyme_pepxml(psm_file):
+    '''
+    :param psm_file: psm_file
+    :return: enzyme
+    '''
     f=open(psm_file,'r')
     count=0
     while count <100:
@@ -89,6 +97,10 @@ def get_enzyme_pepxml(psm_file):
 # Attempts to extract enzyme specificity information from the pepXML file
 #
 def get_enzyme_specificity_pepxml(psm_file):
+    '''
+    :param psm_file: psm file
+    :return: enzyme specificity
+    '''
     f=open(psm_file,'r')
     count=0
     while count <100:
@@ -114,6 +126,10 @@ def get_enzyme_specificity_pepxml(psm_file):
 # extract search summary information from pepXML
 #
 def extract_comments_from_pepxml(psm_file):
+    '''
+    :param psm_file: psm_file
+    :return: comments array
+    '''
     f=open(psm_file,'r')
     count=0
     comments=[]
@@ -126,9 +142,14 @@ def extract_comments_from_pepxml(psm_file):
                 line=f.readline()
             return comments
     return comments
-
+#
+# retrieve score for a psm
+#
 def _get_score_(search_score):
-
+    '''
+    :param search_score: score dictionairy
+    :return: score
+    '''
     hit = 0
     hit_key = ''
     score = {}
@@ -141,8 +162,14 @@ def _get_score_(search_score):
         return  search_score[hit_key]
     else:
         return "*"
-
+#
+# retrieve the evalue for a psm
+#
 def _get_evalue_(search_score):
+    '''
+    :param search_score: score dictionairy
+    :return: evalye
+    '''
 
     hit = 0
     hit_key = ''
@@ -157,5 +184,3 @@ def _get_evalue_(search_score):
         return search_score[hit_key]
     else:
         return "*"
-
-#get_PSM_pepxml("/home/vladie/Desktop/proBAMconvert/NTermCofr.pepXML")

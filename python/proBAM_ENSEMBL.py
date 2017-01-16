@@ -16,10 +16,8 @@
 ##############################################################################
 
 from cogent.core.genetic_code import DEFAULT as standard_code
-from cogent.db.ensembl import Genome,Species,host
-import sqlalchemy as sql
 import proBAM_biomart
-import sys
+import MySQLdb
 
 
 #
@@ -56,51 +54,72 @@ def prepareAnnotationENSEMBL(psm_protein_id,mode,database_v,species,three_frame_
     :param species: species name
     :return: dictionairy mapping proteins into ENSEMBL
     '''
-    print('Commencing ENSEMBL data retrieval')
-    # create connection to ensembl database
-    if species=="arabidopsis_thaliana":
-        Genome_species=Species.getCommonName(species.replace('_',' '))
-        account=host.HostAccount(host="mysql-eg-publicsql.ebi.ac.uk",user="anonymous",passwd="",port=4157)
-        ensembl=Genome(Species=Genome_species,account=account,Release=30)
-    else:
-        Genome_species=Species.getCommonName(species.replace('_',' '))
-        ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+    db = MySQLdb.connect(host='ensembldb.ensembl.org',user='anonymous',passwd='',port=3306)
+    cur = db.cursor()
 
+    cur.execute('show databases')
+    for row in cur.fetchall():
+        if species+'_core_'+str(database_v) in row[0]:
+            mysql_database=row[0]
+            break
+    db.close()
+    db = MySQLdb.connect(host='ensembldb.ensembl.org',user='anonymous',passwd='',port=3306, db=mysql_database)
+    cur = db.cursor()
 
-    # convert IDs
-    translation_table=ensembl.CoreDb.getTable('translation')
-    transcript_table=ensembl.CoreDb.getTable('transcript')
-    select_obj=[transcript_table.c.stable_id,
-                translation_table.c.stable_id,
-                transcript_table.c.transcript_id,
-                translation_table.c.seq_start,
-                translation_table.c.start_exon_id,
-                ]
-    from_obj=translation_table.join(transcript_table,transcript_table.c.transcript_id==translation_table.c.transcript_id)
-    if mode=='protein':
-        id=1
-        query = sql.select(select_obj,from_obj=[from_obj],
-                           whereclause = translation_table.c.stable_id.in_(psm_protein_id))
+    chunked_psm_protein_id=chunkIt(psm_protein_id,10)
+    process=0
+    psm_protein_id = {}
+    transcript_ids = []
+    for chunk in chunked_psm_protein_id:
+        first=1
+        where_clause='WHERE '
+        for i in range(0,len(chunk)):
+            if mode == 'protein':
+                if first==1:
+                    where_clause+="translation.stable_id='"+str(chunk[i])+"' "
+                    first=0
+                else:
+                    where_clause += "OR translation.stable_id='" + str(chunk[i]) + "' "
+            elif mode == 'transcript':
+                if first==1:
+                    where_clause+="transcript.stable_id='"+str(chunk[i])+"' "
+                    first=0
+                else:
+                    where_clause += "OR transcript.stable_id='" + str(chunk[i]) + "' "
 
-    elif mode=='transcript':
-        id=0
-        query = sql.select(select_obj,from_obj=[from_obj],
-                           whereclause = transcript_table.c.stable_id.in_(psm_protein_id))
-    psm_protein_id={}
-    transcript_ids=[]
-    for row in query.execute():
-        #print row
-        transcript_ids.append(row[2])
-        psm_protein_id[row[id]]={'transcript_id':row[0],'translation_id':row[1],
-                                 'transcript_seq':'','protein_seq':'',
-                                 'chr':'','strand':'','5UTR_offset':row[3],'start_exon_rank':row[4]}
-    return ensembl_construct_sequences(psm_protein_id,ensembl,transcript_ids,database_v,species,
+        if mode == 'protein':
+            id = 1
+            sql='SELECT transcript.stable_id,translation.stable_id,transcript.transcript_id,'\
+                        'translation.seq_start,translation.start_exon_id '\
+                        'from transcript LEFT JOIN translation ON '\
+                        'transcript.transcript_id=translation.transcript_id '+where_clause
+            cur.execute(sql)
+
+        elif mode == 'transcript':
+            id = 0
+            sql='SELECT transcript.stable_id,translation.stable_id,transcript.transcript_id,'\
+                        'translation.seq_start,translation.start_exon_id '\
+                        'FROM transcript LEFT JOIN translation ON '\
+                        'transcript.transcript_id=translation.transcript_id '+where_clause
+            cur.execute(sql)
+
+        for row in cur.fetchall():
+            transcript_ids.append(row[2])
+            psm_protein_id[row[id]] = {'transcript_id': row[0], 'translation_id': row[1],
+                                       'transcript_seq': '', 'protein_seq': '',
+                                       'chr': '', 'strand': '', '5UTR_offset': row[3], 'start_exon_rank': row[4]}
+        if process < 100:
+            process += 10
+            print str(process) + "% ",
+    db.close()
+    print " "
+    return ensembl_construct_sequences(psm_protein_id,mysql_database,transcript_ids,database_v,species,
                                        three_frame_translation,mode)
 
 #
 # Retrieve DNA-sequence, Splice, construct protein sequence and store
 #
-def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,species,three_frame_translation,mode,):
+def ensembl_construct_sequences(psm_hash,mysql_db,transcript_ids,database_v,species,three_frame_translation,mode,):
     '''
     :param psm_hash: dictionair with protein / ensembl information ( see prepareAnnotationENSEMBL)
     :param ensembl:ensembl genome
@@ -119,23 +138,31 @@ def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,speci
         biomart_key_hash[psm_hash[key]['transcript_id']]=key
         stable_transcript_ids.append(psm_hash[key]['transcript_id'])
 
-    # Retrieve cds,chr,transcript_id and strand from biomart
-    biomart_result=proBAM_biomart.retrieve_data_from_biomart(database_v,species,stable_transcript_ids,three_frame_translation)
-    for row in biomart_result:
-        row=row.split("\t")
-        try:
-            psm_hash[biomart_key_hash[row[1]]]['transcript_seq']=row[0]
-            psm_hash[biomart_key_hash[row[1]]]['shift']=_calc_seq_shift_(row[0])
-            psm_hash[biomart_key_hash[row[1]]]['protein_seq']=standard_code.translate(row[0])
-            psm_hash[biomart_key_hash[row[1]]]['chr']=row[2]
-            psm_hash[biomart_key_hash[row[1]]]['strand']=row[3]
-            del row
-        except IndexError:
-            pass
-    del biomart_result
+    chunked_stable_transcript_id=chunkIt(stable_transcript_ids,10)
+    process=0
+    c=0
+    for chunk in chunked_stable_transcript_id:
+        # Retrieve cds,chr,transcript_id and strand from biomart
+        biomart_result=proBAM_biomart.retrieve_data_from_biomart(database_v,species,chunk,three_frame_translation)
+        for row in biomart_result:
+            row=row.split("\t")
+            try:
+                psm_hash[biomart_key_hash[row[1]]]['transcript_seq']=row[0]
+                psm_hash[biomart_key_hash[row[1]]]['shift']=_calc_seq_shift_(row[0])
+                psm_hash[biomart_key_hash[row[1]]]['protein_seq']=standard_code.translate(row[0])
+                psm_hash[biomart_key_hash[row[1]]]['chr']=row[2]
+                psm_hash[biomart_key_hash[row[1]]]['strand']=row[3]
+                del row
+            except IndexError:
+                pass
+        del biomart_result
+        if process<100:
+            process+=10
+            print str(process)+"% ",
+    print " "
 
     # get exons directly from core database
-    temp_exon_hash=get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode)
+    temp_exon_hash=get_ensembl_exons(mysql_db,transcript_ids,psm_hash,mode)
     exon_hash=temp_exon_hash[0]
     psm_hash=temp_exon_hash[1]
     del temp_exon_hash
@@ -152,9 +179,33 @@ def ensembl_construct_sequences(psm_hash,ensembl,transcript_ids,database_v,speci
     return [psm_hash,exon_hash]
 
 #
+# Divides a array in equal parts (chunks) ( fair redistributing of computational load)
 #
+def chunkIt(seq, num):
+    '''
+    :param seq: sequence or array
+    :param num: number of chunks to be distributed
+    :return: an array with in each compartment an equal amount of values
+    '''
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
+
+#
+# for some transcript sequences the exact start position is not know (N), for these transcript sequences the
+# start position should be shifted till first known base (ATGC)
 #
 def _calc_seq_shift_(sequence):
+    '''
+    :param sequence: transcript sequence
+    :return: shift observed in the transcript sequence
+    '''
     i = 0
     hit=0
     shift = 0
@@ -187,7 +238,7 @@ def retrieve_protein_seq(transcript_seq,exons,offset,start_exon):
             break
     return transcript_seq[(count-1):len(transcript_seq)]
 
-def get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode):
+def get_ensembl_exons(mysql_database,transcript_ids,psm_hash,mode):
     '''
     :param ensembl: ENSEMBL genome
     :param transcript_ids: list of transcript ids
@@ -195,40 +246,53 @@ def get_ensembl_exons(ensembl,transcript_ids,psm_hash,mode):
     :return: exon hash
     '''
     print "Commencing exon retrieval"
+    transcript_ids=list(set(transcript_ids))
     exon_hash={}
+    prot_tr = {}
     #connect and join tables in order to retrieve exon information
-    transcript_table=ensembl.CoreDb.getTable('transcript')
-    exon_transcript_table=ensembl.CoreDb.getTable('exon_transcript')
-    exon_table=ensembl.CoreDb.getTable('exon')
-    select_obj=[exon_table.c.seq_region_start,
-                exon_table.c.seq_region_end,
-                exon_transcript_table.c.rank,
-                transcript_table.c.stable_id,
-                exon_transcript_table.c.exon_id
-                ]
-    from_obj=exon_transcript_table.join(exon_table,exon_table.c.exon_id==exon_transcript_table.c.exon_id) \
-                                  .join(transcript_table,transcript_table.c.transcript_id==
-                                        exon_transcript_table.c.transcript_id)
-    query = sql.select(select_obj,from_obj=[from_obj],
-                           whereclause = exon_transcript_table.c.transcript_id.in_(transcript_ids))
+    chunked_transcript_ids=chunkIt(transcript_ids, 10)
+    process=0
+    db = MySQLdb.connect(host='ensembldb.ensembl.org',user='anonymous',passwd='',port=3306, db=mysql_database)
+    cur = db.cursor()
+    for chunk in chunked_transcript_ids:
+        first=1
+        where_clause='WHERE '
+        for i in range(0,len(chunk)):
+            if first == 1:
+                where_clause += "exon_transcript.transcript_id='" + str(chunk[i]) + "' "
+                first = 0
+            else:
+                where_clause += "OR exon_transcript.transcript_id='" + str(chunk[i]) + "' "
 
-    #speed up process by making a hash
-    if mode=='protein':
-        prot_tr={}
-        for key in psm_hash.keys():
-            prot_tr[psm_hash[key]['transcript_id']]=key
-    for row in query.execute():
-        if row[3] not in exon_hash.keys():
-            exon_hash[row[3]]=[]
-        if mode=='transcript':
-            if row[3] in psm_hash.keys():
-                if psm_hash[row[3]]['start_exon_rank']==row[4]:
-                    psm_hash[row[3]]['start_exon_rank']=row[2]
-        elif mode=='protein':
-            if row[3] in prot_tr.keys():
-                if psm_hash[prot_tr[row[3]]]['start_exon_rank'] == row[4]:
-                    psm_hash[prot_tr[row[3]]]['start_exon_rank'] = row[2]
-        exon_hash[row[3]].append([str(row[0]),str(row[1]),str(row[2])])
+        cur.execute("SELECT exon.seq_region_start, exon.seq_region_end, exon_transcript.rank, transcript.stable_id, " \
+        "exon_transcript.exon_id " \
+        "FROM exon_transcript LEFT JOIN exon " \
+        "ON exon.exon_id=exon_transcript.exon_id " \
+        "LEFT JOIN transcript " \
+        "ON transcript.transcript_id=exon_transcript.transcript_id " + where_clause)
+
+        #speed up process by making a hash
+        if mode=='protein':
+            for key in psm_hash:
+                prot_tr[psm_hash[key]['transcript_id']]=key
+        for row in cur.fetchall():
+            if row[3] not in exon_hash:
+                exon_hash[row[3]]=[]
+            if mode=='transcript':
+                if row[3] in psm_hash:
+                    if psm_hash[row[3]]['start_exon_rank']==row[4]:
+                        psm_hash[row[3]]['start_exon_rank']=row[2]
+            elif mode=='protein':
+                if row[3] in prot_tr:
+                    if psm_hash[prot_tr[row[3]]]['start_exon_rank'] == row[4]:
+                        psm_hash[prot_tr[row[3]]]['start_exon_rank'] = row[2]
+            exon_hash[row[3]].append([str(row[0]),str(row[1]),str(row[2])])
+        if process < 100:
+            process += 10
+            print str(process) + "% ",
+
+    db.close()
+    print " "
     return [exon_hash,psm_hash]
 
 #
@@ -241,37 +305,31 @@ def create_SQ_header(database_v,species):
     '''
     SQ=[]
     # create connection to ensembm database
-        # create connection to ensembl database
-    if species=="arabidopsis_thaliana":
-        Genome_species=Species.getCommonName(species.replace('_',' '))
-        account=host.HostAccount(host="mysql-eg-publicsql.ebi.ac.uk",user="anonymous",passwd="",port=4157)
-        ensembl=Genome(Species=Genome_species,account=account,Release=30)
-    else:
-        Genome_species=Species.getCommonName(species.replace('_',' '))
-        ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+    # create connection to ensembl database
+    db = MySQLdb.connect(host='ensembldb.ensembl.org', user='anonymous', passwd='', port=3306)
+    cur = db.cursor()
 
-    # convert IDs
-    coord_table=ensembl.CoreDb.getTable('coord_system')
-    seq_region_table=ensembl.CoreDb.getTable('seq_region')
-    select_obj=[seq_region_table.c.name,
-                seq_region_table.c.length,
-                coord_table.c.version,
-                ]
-    from_obj=seq_region_table.join(coord_table,coord_table.c.coord_system_id==seq_region_table.c.coord_system_id)
-
-    query = sql.select(select_obj,from_obj=[from_obj],
-                           whereclause = coord_table.c.rank==1)
-
-    for row in query.execute():
+    cur.execute('show databases')
+    for row in cur.fetchall():
+        if species + '_core_' + str(database_v) in row[0]:
+            mysql_database = row[0]
+            break
+    db.close()
+    db = MySQLdb.connect(host='ensembldb.ensembl.org', user='anonymous', passwd='', port=3306, db=mysql_database)
+    cur = db.cursor()
+    cur.execute("select seq_region.name,seq_region.length,coord_system.version FROM seq_region LEFT JOIN coord_system "
+                "ON coord_system.coord_system_id=seq_region.coord_system_id WHERE coord_system.rank=1")
+    for row in cur.fetchall():
         if '_' not in row[0]:
             SQ_string= "@SQ\tSN:chr"+str(row[0])+"\tLN:"+str(row[1])+"\tAS:"+str(row[2])+"\tSP:"+str(species)
             SQ.append(SQ_string)
+    db.close()
     return SQ
+
 #
 # get Genome assembly ID
 #
-#
-# Create SQ header for SAM file (ENSEMBL) get chr location and coordinates and store them in an array
+#create_SQ_headeron and coordinates and store them in an array
 #
 def get_genome_version(database_v,species):
     '''
@@ -281,24 +339,23 @@ def get_genome_version(database_v,species):
     SQ=[]
     # create connection to ensembm database
         # create connection to ensembl database
-    if species=="arabidopsis_thaliana":
-        Genome_species=Species.getCommonName(species.replace('_',' '))
-        account=host.HostAccount(host="mysql-eg-publicsql.ebi.ac.uk",user="anonymous",passwd="",port=4157)
-        ensembl=Genome(Species=Genome_species,account=account,Release=30)
-    else:
-        Genome_species=Species.getCommonName(species.replace('_',' '))
-        ensembl=Genome(Species=Genome_species,Release=database_v,account=None)
+    db = MySQLdb.connect(host='ensembldb.ensembl.org',user='anonymous',passwd='',port=3306)
+    cur = db.cursor()
 
-    # convert IDs
-    coord_table=ensembl.CoreDb.getTable('coord_system')
-    select_obj=[
-                coord_table.c.version,
-                ]
+    cur.execute('show databases')
+    for row in cur.fetchall():
+        if species+'_core_'+str(database_v) in row[0]:
+            mysql_database=row[0]
+            break
+    db.close()
+    db = MySQLdb.connect(host='ensembldb.ensembl.org',user='anonymous',passwd='',port=3306, db=mysql_database)
+    cur = db.cursor()
 
-    query = sql.select(select_obj,from_obj=[coord_table],
-                           whereclause = coord_table.c.rank==1)
-    for row in query.execute():
+    cur.execute("SELECT version from coord_system where rank=1")
+
+    for row in cur.execute():
         result=row[0]
 
     version=str(species+"."+result)
+    db.close()
     return version

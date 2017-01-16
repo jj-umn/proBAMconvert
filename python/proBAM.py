@@ -32,9 +32,11 @@ import sys
 import getopt
 import os
 import proBAM_proBED
+import proBAM_GUI
 import proBAM_IDparser
 import proBAM_pepxml
 from cogent.core.genetic_code import DEFAULT as standard_code
+import argparse
 from proBAM_coref import *
 
 try:
@@ -55,6 +57,48 @@ numpy
 matplotlib
 pyteomics
 '''
+#
+# Parse command line arguments
+#
+def get_parser():
+    '''
+    :return: parser
+    '''
+    parser = argparse.ArgumentParser(description=('proBAMconvert version 1.0.0'))
+    parser.add_argument('--name','-N',help='name of the project (will be determine how the output file is called',
+                        required=True)
+    parser.add_argument('--mismatches', '-M', help='numpber of mismatches allowed during mapping',
+                        required=False,default=0,choices=[0,1,2,3,4,5],dest='allowed_mismatches')
+    parser.add_argument('--version', '-V', help='ENSEMBL version to be used',
+                        required=False,default=87,choices=[54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73
+                                                           ,74,75,76,77,78,79,80,81,82,83,84,85,86,87],
+                        dest='database_v')
+    parser.add_argument('--database', '-D', help='Which database has to be used (currently only ENSEMBL is available',
+                        default="ENSEMBL",choices=['ENSEMBL'])
+    parser.add_argument('--species', '-S', help='species to be used',
+                        required=True,choices=['homo_sapiens','mus_musculus','drosophila_melanogaster','danio_rerio'])
+    parser.add_argument('--file', '-F', help='location of the psm file to be processed',
+                        required=True,dest='psm_file')
+    parser.add_argument('--directory', '-C', help='location where to output files should be stored',
+                        default=os.getcwd())
+    parser.add_argument('--rm_duplicates', '-R', help='Whether duplicates should be removes',
+                        default='N',choices=['Y','N'])
+    parser.add_argument('--three_frame_translation', '-T', help='translate transcript sequences in 3 frames',
+                        default='N',choices=['Y','N'])
+    parser.add_argument('--decoy_annotation', '-E', help='annotation for DECOY PSM',
+                        default='REV_,DECOY_,_REVERSED,REVERSED_,_DECOY')
+    parser.add_argument('--sorting_order', '-O', help='sorting order of the SAM file',
+                        default='unknown',choices=['unknown','unsorted','queryname','coordinate'])
+    parser.add_argument('--pre_picked_annotation', '-P', help='Which/How annotation should be identified',
+                        default='First',choices=['First','Ensembl_tr', 'Ensembl_pr','UniProt_ACC','UniProt_Entry',
+                    'RefSeq','all'])
+    parser.add_argument('--include_unmapped', '-U', help='Whether unmapped psm should be included in the output',
+                        default='Y',choices=['Y','N'])
+    parser.add_argument('--conversion_mode', '-X', help='which ouput format should be generated',
+                        default='proBAM_psm',choices=['proBAM_psm','proBAM_peptide','proBAM_peptide_mod','proBED'])
+    parser.add_argument('--comments', '-Y', help='add a comment to the file',
+                        default='')
+    return parser
 
 #
 # Command line variable input
@@ -73,159 +117,41 @@ def get_input_variables():
     global psm_file
     global directory
     global decoy_annotation
-    global version
     global sorting_order
-    global allow_decoys
     global rm_duplicates
     global three_frame_translation
     global command_line
     global comments
-    global probed
+    global conversion_mode
     global pre_picked_annotation
     global include_unmapped
+    global version
 
     ######################################
     ### VARIABLE AND INPUT DECLARATION ###
     ######################################
-'''
-    name=""
-    mismatches=0
-    version=""
-    database=""
-    species=""
-    include_unmapped='Y'
-    psm_file=""
-    directory=""
-    comments=[]
-    decoy_annotation=['REV_','DECOY_','_REVERSED']
-    version='1.0'
-    # can be unknown,unsorted, queryname or coordinate, can be specified by user
-    sorting_order='unknown'
-    allow_decoys=""
-    rm_duplicates=""
-    three_frame_translation
-    probed="N"
-    pre_picked_annotation="First"
-
-
-    #
-    # Read command line args
-    # Check for valid arguments
-    #
-
-    try:
-        myopts, args = getopt.getopt(sys.argv[1:],"n:m:v:d:s:f:c:r:a:t:e:o:i:p:u:",["name=","mismatches=","version=","database=",
-                                                                           "species=","file=","directory=",
-                                                                           "rm_duplicates=","allow_decoys=",
-                                                                           "tri_frame_translation=","decoy_annotation=",
-                                                                           "sorting_order=","probed=","pre_picked_annotation=",
-                                                                           "include_unmapped="])
-    except getopt.GetoptError as err:
-        print(err)
-        sys.exit()
-
-    ###############################
-    # o == option
-    # a == argument passed to the o
-    ###############################
-
-    #
-    # Catch arguments
-    #
-
-    for o, a in myopts:
-        if o in ('-n','--name'):
-            result_db=a
-        if o in ('-m','--mismatches'):
-            mismatches=a
-        if o in ('-v','--version'):
-            version=a
-        if o in ('-d','--database'):
-            database=a
-        if o in ('-s','--species'):
-            species=a
-        if o in ('-f','--file'):
-            psm_file=a
-        if o in ('-c','--directory'):
-            directory=a
-        if o in ('-r','--rm_duplicates'):
-            rm_duplicates=a
-        if o in ('-a','--allow_decoys'):
-            allow_decoys=a
-        if o in ('-t','--three_frame_translation'):
-            allow_decoys=a
-        if o in ('-e','--decoy_annotation'):
-            decoy_annotation=a.split(',')
-        if o in ('-o','--sorting_order'):
-            sorting_order=a
-        if o in ('-i','--probed'):
-            probed=a
-        if o in ('-p','--pre_picked_annotation'):
-            pre_picked_annotation=a
-        if o in ('-u','--include_unmapped'):
-            include_unmapped=a
-
-    #
-    # Check for correct argument, output argument and parse
-    #
-
-    if(database==''):
-        print("Error: do not forget to pass the database")
-        sys.exit()
-    database=database.upper()
-    if database !="ENSEMBL":
-        print 'Error: unsupported database \n' \
-              'currently supported databases: ENSEMBL'
-        sys.exit
-    if(version == ''):
-        print("Error: do not forget to pass the database version !")
-        sys.exit()
-    species=species.lower()
-    proBAM_biomart._get_ensembl_dataset_(species)
-    if(species==''):
-        print("Error: do not forget to pass the species argument")
-        sys.exit()
-    if(file == ''):
-        print("Error: do not forget to pass psm file (pepxml, mzid or mztab) !")
-        sys.exit()
-    if(directory == ''):
-       directory = os.getcwd()
-       os.chdir(directory)
-    if(directory !=''):
-        os.chdir(directory)
-    if rm_duplicates!="Y":
-        rm_duplicats="N"
-    if allow_decoys!="Y":
-        allow_decoys="N"
-    if three_frame_translation!="Y":
-        three_frame_translation="N"
-    if probed!='Y':
-        probed='N'
-    if include_unmapped!='N':
-        include_unmapped=Y
-
-    allowed_mismatches=mismatches
-    database_v=version
+    version='1.0.0'
+    decoy_annotation=decoy_annotation.split(',')
 
     command_line = "python proBAM.py --name " + str(name) + " --mismatches " + str(
-        allowed_mismatches) + " --version " + str(database_v) \
+                   allowed_mismatches) + " --version " + str(database_v) \
                    + " --database " + str(database) + " --species " + str(species) + " --file " + str(psm_file) + \
                    " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates) + \
-                   " --allow_decoys " + str(allow_decoys) + " --tri_frame_translation " + str(three_frame_translation )
+                   " --tri_frame_translation " + str(three_frame_translation)+\
+                   " --conversion_mode "+str(conversion_mode)
 
     # ouput variables
-    print(  "psm file:                                      " + str(file) +"\n"+
+    print(  "psm file:                                      " + str(psm_file) +"\n"+
             "directory:                                     " + str(directory) +"\n"+
             "database                                       " + str(database) +"\n"+
             "database version:                              " + str(database_v) +"\n"+
             "species:                                       " + str(species) +"\n"+
-            "allow decoys:                                  " + str(allow_decoys) +"\n"+
             "allowed mismatches:                            " + str(allowed_mismatches)+"\n"+
             "three_frame_translation:                       " + str(three_frame_translation)+"\n"+
             "decoy annotations:                             " + str(decoy_annotation)+"\n"+
             "sorting order:                                 " + str(sorting_order)+"\n"+
-            "proBED:                                        " + str(probed)+"\n"+
-            "pre picked annotation                          " + str(pre_picked_annotation))
+            "pre picked annotation                          " + str(pre_picked_annotation)+"\n"+
+            "conversion_mode:                               " + str(conversion_mode))
 
 
 '''
@@ -235,29 +161,30 @@ def get_input_variables():
 ###############################
 
 directory="/home/vladie/Desktop/proBAMconvert/output/"
-psm_file="/home/vladie/Desktop/PXD001390.mztab"
+psm_file="/home/vladie/Desktop/proBAMconvert/PXD000652.mzid"
 species="homo_sapiens"
 database='ENSEMBL'
-database_v=85
+database_v=87
 # TODO Let users specify used the decoy annotation
 decoy_annotation=['REV_','DECOY_','_REVERSED','REVERSED_','_DECOY']
 allowed_mismatches=0
 version='1.0'
 # can be unknown,unsorted, queryname or coordinate, can be specified by user
 sorting_order='unknown'
-name='test'
+name='test4'
 three_frame_translation='N'
 rm_duplicates="Y"
 probed='N'
 comments=''
 include_unmapped='N'
-pre_picked_annotation="First"
+pre_picked_annotation="all"
+conversion_mode='proBAM_psm'
 
 command_line= "python proBAM.py --name "+str(name)+" --mismatches "+str(allowed_mismatches)+" --version "+str(database_v)\
               +" --database "+str(database)+" --species "+str(species)+" --file "+str(psm_file)+\
               " --directory "+str(directory)+" --rm_duplicates "+str(rm_duplicates)+\
               " --tri_frame_translation "+str(three_frame_translation+
-              "--pre_picked_annotation "+str(pre_picked_annotation))
+              "--pre_picked_annotation "+str(pre_picked_annotation)+" --conversion_mode "+str(conversion_mode))
 
 # ouput variables
 print(  "psm file:                                      " + str(psm_file) +"\n"+
@@ -270,7 +197,7 @@ print(  "psm file:                                      " + str(psm_file) +"\n"+
         "remove duplicates:                             " + str(rm_duplicates)+"\n"+
         "pre picked annotation:                         " + str(pre_picked_annotation)+"\n"+
         "include_unmapped:                              " + str(include_unmapped))
-
+'''
 #######################
 ### GETTERS/SETTERS ###
 #######################
@@ -326,16 +253,14 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
     enzyme=get_enzyme(psm_file)
     enzyme_specificity=get_enzyme_specificity(psm_file)
     total_psms=len(psm_hash)
-    current_psm=0
-    percentage=0
-    print "0%                                       100%"
-    sys.stdout.write("[")
+    current_psm=1
+    percentage=5
     for psm in psm_hash:
         # track progress
         current_psm+=1
-        if current_psm/total_psms>percentage:
-            sys.stdout.write(u"\u25A0")
-            percentage+=0.025
+        if (float(current_psm*100)/float(total_psms))>percentage:
+            print str(percentage)+"%",
+            percentage+=5
         # update window if in GUI
         if gui!=None:
             gui.update()
@@ -507,7 +432,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity),
                                           file)
 
-    print "]"
+    print " "
     file.close()
 
 #
@@ -742,7 +667,7 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
     '''
     print 'Creating SAM header'
     header=[]
-    header.append('@HD\tVN:'+version+' SO:'+sorting_order)
+    header.append('@HD\tVN:'+str(version)+' SO:'+sorting_order)
     if database.upper()=="ENSEMBL":
         SQ=proBAM_ENSEMBL.create_SQ_header(database_v,species)
         for row in SQ:
@@ -771,8 +696,7 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
 def sam_2_bam(directory,name):
     '''
     :param directory:
-    :param name:
-    :return:
+    :param name: file name
     '''
     print "Converting SAM to BAM"
     infile = pysam.AlignmentFile((directory+name+'.sam'), "r")
@@ -793,108 +717,178 @@ def sam_2_bam(directory,name):
     pysam.index(directory+name+'.sorted.bam')
 #
 # function to calculate and adjust NH for every peptide
+# Also depending on mode, can create peptide based proBAM
 #
 
-def compute_NH_XL(directory,name,include_unmapped):
-    sam_file=open(directory+name+'.sam','r')
-    original_file = sam_file.read()
-    nh_hash={}
-    xl_hash={}
-    for line in original_file.split("\n"):
-        if len(line)<1:
-            continue
-        elif line[0]=="@":
-            continue
-        else:
-            if line.split("\t")[5]=="*":
+def compute_NH_XL(directory,name,include_unmapped,mode):
+    '''
+    :param directory: directory of the proBAM file
+    :param name: proBAM file name
+    :param include_unmapped: 'Y' or 'N', whether to include unmapped PSMs
+    :param mode: proBAM mode (psm,peptide,peptide-mod...)
+    '''
+    if mode=='proBAM_peptide' or mode=='proBAM_peptide_mod':
+        print "Create peptide-based proBAM"
+        sam_file = open(directory + name + '.sam', 'r')
+        original_file = sam_file.read()
+        nh_hash = {}
+        score_hash = {}
+        peptide_hash={}
+        for line in original_file.split("\n"):
+            if len(line) < 1:
+                continue
+            elif line[0] == "@":
                 continue
             else:
-                if line.split("\t")[0] in xl_hash:
-                    if line.split("\t")[19] not in xl_hash[line.split("\t")[0]]:
-                        xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+                if line.split("\t")[5] == "*":
+                    continue
                 else:
-                    xl_hash[line.split("\t")[0]]=[]
-                    xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
-                if nh_key_line(line) in nh_hash:
-                    if create_id_from_list([line.split('\t')[2],line.split('\t')[3],line.split('\t')[5]]) in \
-                            nh_hash[nh_key_line(line)]:
-                        continue
+                    line=line.split("\t")
+                    if mode=='proBAM_peptide':
+                        key=line[19]+'_'+line[2]+'_'+line[3]+'_'+line[5]
+                        id=line[19].split(':')[2]
+                    elif mode=='proBAM_peptide_mod':
+                        if line[26]=="XM:Z:*":
+                            id=line[19].split(':')[2]
+                        else:
+                            id=line[19].split(':')[2]+","+line[26].split('XM:Z:')[1].replace(";",",")
+                        key=id+'_'+line[2]+'_'+line[3]+'_'+line[5]
+
+                    if id in nh_hash:
+                        if create_id_from_list([line[2], line[3], line[5]]) in \
+                                nh_hash[id]:
+                            continue
+                        else:
+                            nh_hash[id].append(
+                                create_id_from_list([line[2], line[3],
+                                                     line[5]]))
                     else:
-                        nh_hash[nh_key_line(line)].append(create_id_from_list([line.split('\t')[2],line.split('\t')[3],
-                                                                               line.split('\t')[5]]))
-                else:
-                    nh_hash[nh_key_line(line)]=[(create_id_from_list([line.split('\t')[2], line.split('\t')[3],
-                                                                      line.split('\t')[5]]))]
-    sam_file.close()
-    sam_file=open(directory+name+'.sam','w')
-    for line in original_file.split("\n"):
-        if len(line)<1:
-            continue
-        elif line[0]=="@":
-            sam_file.write(line)
-        elif line.split("\t")[5]=="*":
-            if include_unmapped!='N':
-                sam_file.write(line)
-            else:
-                continue
-        else:
-            line=line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]])))
-            line=line.replace("NH:i:*","NH:i:"+str(len(nh_hash[nh_key_line(line)])))
-            sam_file.write(line)
-        sam_file.write("\n")
+                        nh_hash[id] = [(create_id_from_list([line[2], line[3],
+                                                                            line[5]]))]
+                    if key not in peptide_hash:
+                        peptide_hash[key]=[id,line[1],line[2],line[3],line[4],line[5],line[6],line[7],line[8],line[9],
+                                           line[10],line[11],line[12],'XL:i:*',line[14],line[15],line[16],'XI:f:*',
+                                           'XB:f:*',line[19],line[20],line[21],line[22],line[23],'XC:i:*',line[25],
+                                           'XM:Z:*',line[27],line[28],line[29],line[30],line[31],line[32]]
+                    if id not in score_hash:
+                        score_hash[id]=1
+                    else:
+                        if line[22]!='XS:f:*':
+                            if float(line[22].split('XS:f:')[1])>float(peptide_hash[key][22].split('XS:f:')[1]):
+                                peptide_hash[key][22]=line[22]
+                        if line[23] != 'XQ:f:*':
+                            if float(line[23].split('XQ:f:')[1]) > float(peptide_hash[key][23].split('XQ:f:')[1]):
+                                peptide_hash[key][23] = line[23]
 
-def create_id_from_list(list):
-    id=""
-    for i in list:
-        if id == "":
-            id+=str(i)
-        else:
-            id+="_"+str(i)
-    return id
-#
-# for a line creates a unique genomic location key for this peptide
-#
-def nh_key_line(line):
-    line=line.split("\t")
-    key=line[19]+"_"+line[0]
-    return key
+        sam_file.close()
+        sam_file = open(directory + name + '.sam', 'w')
+        for line in original_file.split("\n"):
+            if len(line) < 1:
+                continue
+            elif line[0] == "@":
+                sam_file.write(line)
+                sam_file.write("\n")
+        for key in peptide_hash:
+            if include_unmapped=='N' and peptide_hash[key][5]=='*':
+                continue
+            else:
+                peptide_hash[key][11] = "NH:i:"+ str(len(nh_hash[peptide_hash[key][0]]))
+                sam_file.write(peptide_hash[key][0])
+                for col in peptide_hash[key][1:]:
+                    sam_file.write('\t'+col)
+                sam_file.write("\n")
+    else:
+        sam_file=open(directory+name+'.sam','r')
+        original_file = sam_file.read()
+        nh_hash={}
+        xl_hash={}
+        for line in original_file.split("\n"):
+            if len(line)<1:
+                continue
+            elif line[0]=="@":
+                continue
+            else:
+                if line.split("\t")[5]=="*":
+                    continue
+                else:
+                    if line.split("\t")[0] in xl_hash:
+                        if line.split("\t")[19] not in xl_hash[line.split("\t")[0]]:
+                            xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+                    else:
+                        xl_hash[line.split("\t")[0]]=[]
+                        xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+                    if nh_key_line(line) in nh_hash:
+                        if create_id_from_list([line.split('\t')[2],line.split('\t')[3],line.split('\t')[5]]) in \
+                                nh_hash[nh_key_line(line)]:
+                            continue
+                        else:
+                            nh_hash[nh_key_line(line)].append(create_id_from_list([line.split('\t')[2],line.split('\t')[3],
+                                                                                   line.split('\t')[5]]))
+                    else:
+                        nh_hash[nh_key_line(line)]=[(create_id_from_list([line.split('\t')[2], line.split('\t')[3],
+                                                                          line.split('\t')[5]]))]
+        sam_file.close()
+        sam_file=open(directory+name+'.sam','w')
+        for line in original_file.split("\n"):
+            if len(line)<1:
+                continue
+            elif line[0]=="@":
+                sam_file.write(line)
+            elif line.split("\t")[5]=="*":
+                if include_unmapped!='N':
+                    sam_file.write(line)
+                else:
+                    continue
+            else:
+                line=line.replace("XL:i:*","XL:i:"+str(len(xl_hash[line.split("\t")[0]])))
+                line=line.replace("NH:i:*","NH:i:"+str(len(nh_hash[nh_key_line(line)])))
+                sam_file.write(line)
+            sam_file.write("\n")
 
 ####################
 ### MAIN PROGRAM ###
 ####################
 
 if __name__=='__main__':
-    #get_input_variables()
-    start_time = time.time()
-    # start timing function
+    if len(sys.argv) > 1:
+        parser = get_parser()  # start command line argument parser
+        args = parser.parse_args()  # parse command line arguments
+        globals().update(args.__dict__)
+        start_time = time.time()
+        # start timing function
+        get_input_variables()
 
-    # hash PSM_DATA and define variables
-    psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
+        # hash PSM_DATA and define variables
+        psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
 
-    parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation
-                                          ,pre_picked_annotation)
-    annotation=parse_results[1]
-    psm_hash=parse_results[0]
-    transcript_hash=annotation[0]
-    exon_hash=annotation[1]
-    id_map=parse_results[2]
+        parse_results=proBAM_IDparser.parseID(psm_hash,species,database,decoy_annotation,database_v,three_frame_translation
+                                              ,pre_picked_annotation)
+        annotation=parse_results[1]
+        psm_hash=parse_results[0]
+        transcript_hash=annotation[0]
+        exon_hash=annotation[1]
+        id_map=parse_results[2]
 
-    # convert to SAM
-    if probed=='N':
-        file = open_sam_file(directory, name)
-        create_SAM_header(file, version, database, sorting_order, database_v, species, command_line, psm_file, comments)
-        PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,rm_duplicates,
-                three_frame_translation,psm_file,id_map,None)
-        compute_NH_XL(directory, name, include_unmapped)
-        sam_2_bam(directory, name)
-    # convert to BED
+        # convert to SAM
+        if conversion_mode!='proBED':
+            file = open_sam_file(directory, name)
+            create_SAM_header(file,version, database, sorting_order, database_v, species, command_line, psm_file, comments)
+            PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,rm_duplicates,
+                    three_frame_translation,psm_file,id_map,None)
+            compute_NH_XL(directory, name, include_unmapped,conversion_mode)
+            sam_2_bam(directory, name)
+        # convert to BED
+        else:
+            file = proBAM_proBED.open_bed_file(directory, name)
+            proBAM_proBED.create_BED_header(file, database, database_v, command_line, psm_file, comments)
+            proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,
+                                  rm_duplicates,three_frame_translation,id_map,None,database_v,species)
+
+
+
+        print("proBAM conversion succesful")
+        print("%f seconds" % (time.time() - start_time))         # output script run time
     else:
-        file = proBAM_proBED.open_bed_file(directory, name)
-        proBAM_proBED.create_BED_header(file, database, database_v, command_line, psm_file, comments)
-        proBAM_proBED.PSM2BED(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatches,file,
-                              rm_duplicates,three_frame_translation,id_map,None,database_v,species)
-
-
-
-    print("proBAM conversion succesful")
-    print("%f seconds" % (time.time() - start_time))         # output script run time
+        # start GUI
+        proBAM_GUI._get_global_arguments_()
+        proBAM_GUI.GUI()

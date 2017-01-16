@@ -119,7 +119,7 @@ def _getSpecies_(tk):
     species= StringVar(tk)
     species.set('homo sapiens')
 
-    menu=OptionMenu(tk,species,'homo sapiens','mus musculus','drosophila melanogaster','danio rerio','arabidopsis thaliana')
+    menu=OptionMenu(tk,species,'homo sapiens','mus musculus','drosophila melanogaster','danio rerio')
     menu.config(width=15)
     menu.grid(row=3,column=1)
 
@@ -145,9 +145,9 @@ def _getDatabaseVersion_(tk):
     global database_v
     Label(text='Select database version',background="#f2f2f2",width=30,anchor=W).grid(row=5,column=0)
     database_v= StringVar(tk)
-    database_v.set('85')
+    database_v.set('87')
 
-    menu=OptionMenu(tk,database_v,'85','84','83','82','81','80','79','78','77','76',
+    menu=OptionMenu(tk,database_v,'87','86','85','84','83','82','81','80','79','78','77','76',
                                     '75','74','73','72','71','70','69','68','67','66','65',
                                     '64','63','62','61','60','59','58','57','56','55','54')
     menu.config(width=15,background="#f2f2f2")
@@ -228,7 +228,7 @@ def _get_global_arguments_():
     three_frame_translation="N"
     # can be unknown,unsorted, queryname or coordinate, can be specified by user
     sorting_order='unknown'
-    probed='N'
+    conversion_mod='psm'
 
     pre_picked_annotation="First"
 
@@ -263,13 +263,13 @@ def _sortingOrder_(tk):
     menu.config(width=15)
     menu.grid(row=0,column=1)
 
-def _convert_to_probed_(tk):
-    global probed
-    Label(tk, text='convert to proBED', background="#f2f2f2", width=30, anchor=W).grid(row=8, column=0)
-    probed = StringVar(tk)
-    probed.set('N')
+def _conversion_mode_(tk):
+    global conversion_mode
+    Label(tk, text='conversion_mode', background="#f2f2f2", width=30, anchor=W).grid(row=8, column=0)
+    conversion_mode = StringVar(tk)
+    conversion_mode.set('proBAM_psm')
 
-    menu = OptionMenu(tk, probed, 'Y','N')
+    menu = OptionMenu(tk, conversion_mode, 'proBAM_psm','proBAM_peptide','proBAM_peptide_mod','proBED')
     menu.config(width=15)
     menu.grid(row=8, column=1)
 
@@ -317,7 +317,8 @@ def _pre_picked_annotation(tk):
     new_pre_picked_annotation= StringVar(tk)
     new_pre_picked_annotation.set('First')
 
-    menu=OptionMenu(tk,new_pre_picked_annotation,'First','Ensembl_tr', 'Ensembl_pr','UniProt_ACC','UniProt_Entry')
+    menu=OptionMenu(tk,new_pre_picked_annotation,'First','Ensembl_tr', 'Ensembl_pr','UniProt_ACC','UniProt_Entry',
+                    'RefSeq','all')
     menu.config(width=15)
     menu.grid(row=3,column=1)
 
@@ -385,9 +386,9 @@ def _print_arguments_():
     print 'project name:            '+str(name.get())
     print 'remove duplicate PSMs:   '+rm_duplicates.get()
     print '3-frame translation:     '+three_frame_translation
-    print 'convert to proBED        '+probed.get()
-    print 'pre picked annotation    '+pre_picked_annotation
-    print 'include unmapped PSMs    '+include_unmapped
+    print 'conversion mode:         '+conversion_mode.get()
+    print 'pre picked annotation:   '+pre_picked_annotation
+    print 'include unmapped PSMs:   '+include_unmapped
 
 #
 # Execute proBAMconvert
@@ -437,14 +438,14 @@ def execute_proBAM(root):
         id_map = parse_results[2]
 
         # convert to SAM
-        if probed.get()!='Y':
+        if conversion_mode.get()!='proBED':
             file = proBAM.open_sam_file(directory, name.get())
             proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
                                      species.get(), command_line, psm_file,
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
                            file, rm_duplicates.get(),three_frame_translation,psm_file,id_map,root)
-            proBAM.compute_NH_XL(directory, name.get(),include_unmapped)
+            proBAM.compute_NH_XL(directory, name.get(),include_unmapped,conversion_mode)
             proBAM.sam_2_bam(directory, name.get())
         else:
             file = proBAM_proBED.open_bed_file(directory, name.get())
@@ -514,7 +515,7 @@ def GUI():
     _getDatabase_(root)
     _getDatabaseVersion_(root)
     _getRMDuplicates_(root)
-    _convert_to_probed_(root)
+    _conversion_mode_(root)
     _getAllowedMismatches_(root)
     _advanced_settings_(root)
     _manual_(root)
@@ -525,17 +526,6 @@ def GUI():
     proBam_button.grid(row=11,columnspan=2,pady=10)
     root.update_idletasks()
     root.mainloop()
-
-
-####################
-### MAIN PROGRAM ###
-####################
-
-if __name__=='__main__':
-    #start GUI
-    os.chdir("/home/vladie/Desktop/proBAMconvert")
-    _get_global_arguments_()
-    GUI()
 
 
 

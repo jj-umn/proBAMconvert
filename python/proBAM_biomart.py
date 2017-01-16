@@ -37,7 +37,7 @@ def _get_ensembl_archive_(version,species):
         d={}
         #TODO www.ensembl.org biomart is not working, fix this for later when it's back online
         d[87]="www.ensembl.org"
-        d[86]="http://oct2016.archive.ensembl.org"
+        d[86]="oct2016.archive.ensembl.org"
         d[85]="jul2016.archive.ensembl.org"
         d[84]="mar2016.archive.ensembl.org"
         d[83]="dec2015.archive.ensembl.org"
@@ -70,7 +70,7 @@ def _get_ensembl_archive_(version,species):
         d[56]="sep2009.archive.ensembl.org"
         d[55]="jul2009.archive.ensembl.org"
         d[54]="may2009.archive.ensembl.org"
-        if version in d.keys():
+        if version in d:
             return d[version]
         else:
             raise ValueError('unsupported ensembl version')
@@ -91,7 +91,7 @@ def _get_ensembl_dataset_(species):
     d['danio_rerio']='drerio_gene_ensembl'
     d['arabidopsis_thaliana']='athaliana_eg_gene'
 
-    if species not in d.keys():
+    if species not in d:
         print 'Error: unsupported species'
         print 'Currently supported species:'
         print d.keys()
@@ -191,7 +191,6 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
         #execute query
         xml_query=biomart.get_xml()
         tmp_result=biomart.query(xml_query)
-
         if len(tmp_result)==1:
             print "ERROR: could not convert ID's trough BioMart, " \
                   "Please check whether Ensembl version/species were correctly supplied"
@@ -212,7 +211,13 @@ def id_map_ensembl(to_annotation,version,species,psm_protein_id):
 #
 
 def id_map_ensembl_plants(to_annotation,version,species,psm_protein_id):
-
+    '''
+    :param to_annotation: to which annotation
+    :param version: ensembl version
+    :param species: species
+    :param psm_protein_id: list of protein IDs
+    :return: list of protein ID's converted to ENSEMBL
+    '''
     #create connection
     query_string=_id_in_xml_query_(psm_protein_id)
     version=_get_ensembl_archive_(version,species)
@@ -243,7 +248,4 @@ def id_map_ensembl_plants(to_annotation,version,species,psm_protein_id):
             length=int(items[3])-int(items[1])+1
             result.append(items[0]+"\t"+str(length)+"\t"+items[2])
     return result
-
-
-
 
