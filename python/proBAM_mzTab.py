@@ -18,8 +18,7 @@
 __author__ = 'vladie'
 
 import csv
-import re
-from pyteomics import mass,xml
+from pyteomics import mass
 
 #
 # Parse mztab file into dictionairy

@@ -20,7 +20,6 @@ from __future__ import division
 __author__ = 'Volodimir Olexiouk'
 
 from bioservices import BioMart
-import sys
 
 #
 #Function that links the correct database archive with version number

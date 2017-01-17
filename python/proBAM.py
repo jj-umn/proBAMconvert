@@ -20,25 +20,17 @@ from __future__ import division
 __author__ = 'Volodimir Olexiouk'
 
 import time
-from itertools import imap
-import operator
-import re
 import pysam
 import pysam.ctabixproxies
-import proBAM_biomart
 import proBAM_input
 import proBAM_ENSEMBL
 import sys
-import getopt
 import os
 import proBAM_proBED
 import proBAM_GUI
 import proBAM_IDparser
-import proBAM_pepxml
-from cogent.core.genetic_code import DEFAULT as standard_code
 import argparse
 from proBAM_coref import *
-
 try:
     from collections import OrderedDict
 except ImportError:

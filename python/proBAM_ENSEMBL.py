@@ -198,14 +198,10 @@ def chunkIt(seq, num):
     return out
 
 #
-# for some transcript sequences the exact start position is not know (N), for these transcript sequences the
-# start position should be shifted till first known base (ATGC)
+#
 #
 def _calc_seq_shift_(sequence):
-    '''
-    :param sequence: transcript sequence
-    :return: shift observed in the transcript sequence
-    '''
+
     i = 0
     hit=0
     shift = 0
@@ -313,7 +309,7 @@ def create_SQ_header(database_v,species):
     for row in cur.fetchall():
         if species + '_core_' + str(database_v) in row[0]:
             mysql_database = row[0]
-            break
+
     db.close()
     db = MySQLdb.connect(host='ensembldb.ensembl.org', user='anonymous', passwd='', port=3306, db=mysql_database)
     cur = db.cursor()

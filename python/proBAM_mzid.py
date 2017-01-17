@@ -17,10 +17,9 @@
 
 __author__ = 'vladie'
 
-from pyteomics import mzid,mass,xml,auxiliary
+from pyteomics import mzid
 from fnmatch import fnmatch
 import re
-import time
 
 #
 # Parse mzid file into dictionairy

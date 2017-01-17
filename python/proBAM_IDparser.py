@@ -22,7 +22,6 @@ import re
 import sys
 import urllib,urllib2
 from bioservices import UniProt
-from fnmatch import fnmatch
 
 #
 # Find accession encryption pattern and database

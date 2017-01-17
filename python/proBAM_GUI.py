@@ -18,42 +18,17 @@
 __author__ = 'vladie'
 
 from Tkinter import *
-import ttk
 from tkFileDialog import *
 import os
 import sys
 import ScrolledText
-import time
 import proBAM
 import proBAM_input
 import proBAM_IDparser
 import proBAM_proBED
 from functools import partial
-import webbrowser
 import thread
-
-#import needed for stand-alone executable
-import proBAM_mzTab
-import proBAM_mzid
-import proBAM_ENSEMBL
-import proBAM_biomart
-import six
-import packaging
-import packaging.version
-import packaging.specifiers
-import packaging.markers
-import csv
-from pyteomics import mass,xml
-from pyteomics import mzid,mass,xml
-import re
 import time
-from itertools import imap
-import operator
-import re
-import pysam
-import pysam.ctabixproxies
-from bioservices import BioMart
-import sys
 
 #
 # Update log window periodically
@@ -417,7 +392,7 @@ def execute_proBAM(root):
         _print_arguments_()
         command_line = "python proBAM.py --name " + str(name.get()) + " --mismatches " + str(
             allowed_mismatches.get()) + " --version " + str(database_v.get()) \
-                       + " --database " + str(database.get().upper()) + " --species " + str(species.get()) + " --file " + str(psm_file) + \
+                       + " --database " + str(database.get().upper()) + " --species " + str(species.get().replace(' ','_')) + " --file " + str(psm_file) + \
                        " --directory " + str(directory) + " --rm_duplicates " + str(rm_duplicates.get()) + \
                        " --tri_frame_translation " + \
                        str(three_frame_translation+" --pre_picked_annotation "+pre_picked_annotation) +\
@@ -441,7 +416,7 @@ def execute_proBAM(root):
         if conversion_mode.get()!='proBED':
             file = proBAM.open_sam_file(directory, name.get())
             proBAM.create_SAM_header(file, version, database.get().upper(), sorting_order, database_v.get(),
-                                     species.get(), command_line, psm_file,
+                                     species.get().replace(' ','_'), command_line, psm_file,
                               comments)
             proBAM.PSM2SAM(psm_hash, transcript_hash, exon_hash, decoy_annotation, int(allowed_mismatches.get()),
                            file, rm_duplicates.get(),three_frame_translation,psm_file,id_map,root)
@@ -453,7 +428,7 @@ def execute_proBAM(root):
                                             psm_file, comments)
             proBAM_proBED.PSM2BED(psm_hash, transcript_hash, exon_hash, decoy_annotation,
                                   int(allowed_mismatches.get()), file, rm_duplicates.get(),
-                                  three_frame_translation, id_map, root, database_v.get(), species.get())
+                                  three_frame_translation, id_map, root, database_v.get(), species.get().replace(' ','_'))
 
         root.config(cursor="")
         print("proBAM conversion succesful")
