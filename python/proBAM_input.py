@@ -30,6 +30,7 @@ def get_PSM_hash(psm_file,decoy_annotation):
     :raise: IO error: unrecognized file format
     :return: dictionairy of parsed psm file,
     '''
+    print "Reading PSM-file"
     try:
         # catch mzid file format and parse
         if re.match('^.*\.(mzid)$',psm_file.lower())!=None:

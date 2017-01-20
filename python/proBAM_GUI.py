@@ -96,6 +96,7 @@ def _getSpecies_(tk):
 
     menu=OptionMenu(tk,species,'homo sapiens','mus musculus','drosophila melanogaster','danio rerio')
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=3,column=1)
 
 def _getDatabase_(tk):
@@ -110,6 +111,7 @@ def _getDatabase_(tk):
 
     menu=OptionMenu(tk,database,'Ensembl')
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=4,column=1)
 
 def _getDatabaseVersion_(tk):
@@ -138,6 +140,7 @@ def _getMapDecoy_(tk):
     allow_decoys=StringVar(tk)
     allow_decoys.set('N')
     menu=OptionMenu(tk,allow_decoys,'N','Y')
+    menu.config(width=15, background="#f2f2f2")
     menu.config(width=15)
     menu.grid(row=6,column=1)
 
@@ -152,6 +155,7 @@ def _getRMDuplicates_(tk):
     rm_duplicates.set("N")
     menu=OptionMenu(tk,rm_duplicates,"N","Y")
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=7,column=1)
 
 def _getAllowedMismatches_(tk):
@@ -166,6 +170,7 @@ def _getAllowedMismatches_(tk):
 
     menu=OptionMenu(tk,allowed_mismatches,'0','1','2','3','4','5')
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=9,column=1)
 #
 # Center the toplevel widget
@@ -236,6 +241,7 @@ def _sortingOrder_(tk):
 
     menu=OptionMenu(tk,new_sorting_order,'unknown','unsorted', 'queryname','coordinate')
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=0,column=1)
 
 def _conversion_mode_(tk):
@@ -246,6 +252,7 @@ def _conversion_mode_(tk):
 
     menu = OptionMenu(tk, conversion_mode, 'proBAM_psm','proBAM_peptide','proBAM_peptide_mod','proBED')
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=8, column=1)
 
 def _get3frame_(tk):
@@ -259,6 +266,7 @@ def _get3frame_(tk):
     new_three_frame_translation.set("N")
     menu=OptionMenu(tk,new_three_frame_translation,"N","Y")
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=2,column=1)
 
 def _decoyAnnotation_(tk):
@@ -284,6 +292,7 @@ def _include_unmapped_(tk):
     new_include_unmapped.set("Y")
     menu = OptionMenu(tk, new_include_unmapped, "Y", "N")
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=4, column=1)
 
 def _pre_picked_annotation(tk):
@@ -295,6 +304,7 @@ def _pre_picked_annotation(tk):
     menu=OptionMenu(tk,new_pre_picked_annotation,'First','Ensembl_tr', 'Ensembl_pr','UniProt_ACC','UniProt_Entry',
                     'RefSeq','all')
     menu.config(width=15)
+    menu.config(width=15, background="#f2f2f2")
     menu.grid(row=3,column=1)
 
 def _save_and_exit_(top):
@@ -494,6 +504,7 @@ def GUI():
     _getAllowedMismatches_(root)
     _advanced_settings_(root)
     _manual_(root)
+    Label(text='proBAMconvert v1.0.0', pady=5, background="#f2f2f2").grid(row=12, columnspan=2)
     execute_proBAM_argumented=partial(execute_proBAM,root)
     global proBam_button
     proBam_button=Button(text='Convert',fg="#0099cc",command=lambda:

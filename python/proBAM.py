@@ -308,6 +308,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 else:
                                     # map peptide on protein and retrieve hit position, iterate over all hits
                                     for phit in protein_hit:
+                                        cigar=compute_cigar(temp_result[3],pos_and_exons[1],
+                                                            transcript_hash[transcript_id]['strand'],row['peptide'])
                                         start_time = time.time()
                                         is_hit=1
                                         temp_result=[None]*33
@@ -335,9 +337,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                         #MAPQ
                                         temp_result[4]=255
                                         #CIGAR
-                                        temp_result[5]=compute_cigar(temp_result[3],
-                                                                     pos_and_exons[1],
-                                                                     transcript_hash[transcript_id]['strand'],row['peptide'])[0]
+                                        temp_result[5]=cigar[0]
                                         #RNEXT
                                         temp_result[6]='*'
                                         #PNEXT
@@ -362,53 +362,51 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                         #
                                         #NH: number of genomic location the peptide mapping to
                                         temp_result[11]='NH:i:*'
-                                        #XO: uniqueness of peptide mapping
-                                        #todo figure this one out
-                                        temp_result[12]='XO:Z:*'
-                                        #XL: number of peptides the spectrum mapping to
-                                        temp_result[13]='XL:i:*'
-                                        #XP; peptide sequence
-                                        temp_result[14]='XP:Z:'+row['peptide']
-                                        #YP: protein accession ID from the original search
-                                        temp_result[15]='YP:Z:'+str(key)
-                                        #XF: reading frame of the peptide
-                                        temp_result[16]='XF:Z:'+compute_cigar(temp_result[3],
-                                                                     exon_hash[transcript_hash[transcript_id]['transcript_id']],
-                                                                     transcript_hash[transcript_id]['strand'],row['peptide'])[1]
-                                        #XI: peptide intensity
-                                        temp_result[17]="XI:f:*"
-                                        #XB: Mass error (experimental - calculated)
-                                        temp_result[18]="XB:f:"+str(row['massdiff'])
-                                        #XR: reference peptide sequence
-                                        temp_result[19]='XR:Z:'+translate_seq(temp_result[9],
-                                                                              transcript_hash[transcript_id]['strand'])
-                                        #YB: preceding 2AA
-                                        temp_result[20]="YB:Z:"+str(pre_post_aa[0])
-                                        #YA: following 2AA:
-                                        temp_result[21]="YA:Z:"+str(pre_post_aa[1])
-                                        #XS: PSM score
-                                        temp_result[22]="XS:f:"+str(row['search_score']['score'])
-                                        #XQ: PSM-Qvalue
-                                        temp_result[23]='XQ:f:'+str(row['search_score']['evalue'])
-                                        #XC: Peptide charge
-                                        temp_result[24]='XC:i:'+str(psm['assumed_charge'])
                                         #XA: Whether the peptide is well annotated
-                                        temp_result[25]=create_XA(phit[1])
+                                        temp_result[12]=create_XA(phit[1])
+                                        #XB: Mass error (experimental - calculated)
+                                        temp_result[13]="XB:f:"+str(row['massdiff'])
+                                        #XC: Peptide charge
+                                        temp_result[14]='XC:i:'+str(psm['assumed_charge'])
+                                        #XE: enzyme used
+                                        temp_result[15]="XE:i:"+str(enzyme)
+                                        #XF: reading frame of the peptide
+                                        temp_result[16]='XF:Z:'+cigar[1]
+                                        #XG: Petide type
+                                        temp_result[17]=create_XG(phit[1])
+                                        #XI: peptide intensity
+                                        temp_result[18]="XI:f:*"
+                                        #XL: number of peptides the spectrum mapping to
+                                        temp_result[19]='XL:i:*'
                                         #XM: Modification
-                                        temp_result[26]='XM:Z:'+create_XM(row['modifications'])
+                                        temp_result[20]='XM:Z:'+create_XM(row['modifications'])
                                         #XN: number of mis-cleavages
                                         if 'num_missed_cleaveges' in row:
-                                            temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
+                                            temp_result[21]='XN:i:'+str(row['num_missed_cleavages'])
                                         else:
-                                            temp_result[27]='XN:i:0'
+                                            temp_result[21]='XN:i:0'
+                                        #XO: uniqueness of peptide mapping
+                                        #todo figure this one out
+                                        temp_result[22]='XO:Z:*'
+                                        #XP; peptide sequence
+                                        temp_result[23]='XP:Z:'+row['peptide']
+                                        #XQ: PSM-Qvalue
+                                        temp_result[24]='XQ:f:'+str(row['search_score']['evalue'])
+                                        #XR: reference peptide sequence
+                                        temp_result[25]='XR:Z:'+translate_seq(temp_result[9],
+                                                                              transcript_hash[transcript_id]['strand'])
+                                        #XS: PSM score
+                                        temp_result[26]="XS:f:"+str(row['search_score']['score'])
                                         #XT: non/semi/tryptic
-                                        temp_result[28]="XT:i:"+str(enzyme_specificity)
-                                        #XE: enzyme used
-                                        temp_result[29]="XE:i:"+str(enzyme)
-                                        #XG: Petide type
-                                        temp_result[30]=create_XG(phit[1])
+                                        temp_result[27]="XT:i:"+str(enzyme_specificity)
                                         #XU: petide URL
-                                        temp_result[31]="XU:Z:*"
+                                        temp_result[28]="XU:Z:*"
+                                        #YA: following 2AA:
+                                        temp_result[29]="YA:Z:"+str(pre_post_aa[1])
+                                        #YB: preceding 2AA
+                                        temp_result[30]="YB:Z:"+str(pre_post_aa[0])
+                                        #YP: protein accession ID from the original search
+                                        temp_result[31]='YP:Z:'+str(key)
                                         # ZA additional field specifiying the transcript/protein id used for mapping
                                         temp_result[32] = "ZA:Z:" + str(transcript_id)
                                         # remove duplicates if rm_duplicates=Y
@@ -470,52 +468,52 @@ def unannotated_PSM_to_SAM(psm,row,decoy,key,enzyme,enzyme_specificity):
     #
     #NH: number of genomic location the peptide mapping to
     temp_result[11]='NH:i:*'
-    #XO: uniqueness
-    temp_result[12]='XO:Z:*'
-    #XL: number of peptides the spectrum mapping to
-    temp_result[13]='XL:i:*'
-    #XP; peptide sequence
-    temp_result[14]='XP:Z:'+row['peptide']
-    #YP: protein accession id
-    temp_result[15]="YP:Z:"+str(key)
+    #XA: Whether the peptide is well annotated
+    temp_result[12]='XA:i:2'
+    #XB: Mass error
+    temp_result[13]="XB:f:"+str(row['massdiff'])
+    #XC: Peptide charge
+    temp_result[14]='XC:i:'+str(psm['assumed_charge'])
+    #XE: enzyme
+    temp_result[15]="XE:i:"+str(enzyme)
     #XF: Reading frame of the peptide
     temp_result[16]="XF:Z:*"
-    #XI: Peptide intensity
-    temp_result[17]="XI:f:*"
-    #XB: Mass error
-    temp_result[18]="XB:f:"+str(row['massdiff'])
-    #XR: reference peptide sequence
-    temp_result[19]='XR:Z:*'
-    #YB: 2 AA before
-    temp_result[20]='YB:Z:*'
-    #YA: 2 AA after
-    temp_result[21]='YA:Z:*'
-    # XS: PSM score
-    temp_result[22] = "XS:f:" + str(row['search_score']['score'])
-    # XQ: PSM-Qvalue
-    temp_result[23] = 'XQ:f:' + str(row['search_score']['evalue'])
-    #XC: Peptide charge
-    temp_result[24]='XC:i:'+str(psm['assumed_charge'])
-    #XA: Whether the peptide is well annotated
-    temp_result[25]='XA:i:2'
-    #XM: Modification
-    temp_result[26]='XM:Z:'+create_XM(row['modifications'])
-    #XN: number of mis-cleavages
-    if 'num_missed_cleavages' in row:
-        temp_result[27]='XN:i:'+str(row['num_missed_cleavages'])
-    else:
-        temp_result[27]='XN:i:*'
-    #XT: non/semi/tryptic
-    temp_result[28]="XT:i:"+str(enzyme_specificity)
-    #XE: enzyme
-    temp_result[29]="XE:i:"+str(enzyme)
     #XG: Petide type
     if decoy==1:
-        temp_result[30]="XG:Z:D"
+        temp_result[17]="XG:Z:D"
     else:
-        temp_result[30]="XG:Z:U"
+        temp_result[17]="XG:Z:U"
+    #XI: Peptide intensity
+    temp_result[18]="XI:f:*"
+    #XL: number of peptides the spectrum mapping to
+    temp_result[19]='XL:i:*'
+    #XM: Modification
+    temp_result[20]='XM:Z:'+create_XM(row['modifications'])
+    #XN: number of mis-cleavages
+    if 'num_missed_cleavages' in row:
+        temp_result[21]='XN:i:'+str(row['num_missed_cleavages'])
+    else:
+        temp_result[21]='XN:i:*'
+    #XO: uniqueness
+    temp_result[22]='XO:Z:*'
+    #XP; peptide sequence
+    temp_result[23]='XP:Z:'+row['peptide']
+    # XQ: PSM-Qvalue
+    temp_result[24] = 'XQ:f:' + str(row['search_score']['evalue'])
+    #XR: reference peptide sequence
+    temp_result[25]='XR:Z:*'
+    # XS: PSM score
+    temp_result[26] = "XS:f:" + str(row['search_score']['score'])
+    #XT: non/semi/tryptic
+    temp_result[27]="XT:i:"+str(enzyme_specificity)
     #XU
-    temp_result[31]="XU:Z:*"
+    temp_result[28]="XU:Z:*"
+    #YA: 2 AA after
+    temp_result[29]='YA:Z:*'
+    #YB: 2 AA before
+    temp_result[30]='YB:Z:*'
+    #YP: protein accession id
+    temp_result[31]="YP:Z:"+str(key)
     #ZA additional field specifiying the transcript/protein id used for mapping
     temp_result[32] = "ZA:Z:*"
     return temp_result
