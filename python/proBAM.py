@@ -764,11 +764,16 @@ def compute_NH_XL(directory,name,include_unmapped,mode):
                         score_hash[id]=1
                     else:
                         if line[26]!='XS:f:*':
-                            if float(line[26].split('XS:f:')[1])>float(peptide_hash[key][26].split('XS:f:')[1]):
-                                peptide_hash[key][26]=line[26]
+                            try:
+                                if float(line[26].split('XS:f:')[1])>float(peptide_hash[key][26].split('XS:f:')[1]):
+                                    peptide_hash[key][26]=line[26]
+                            except:pass
                         if line[24] != 'XQ:f:*':
-                            if float(line[24].split('XQ:f:')[1]) > float(peptide_hash[key][24].split('XQ:f:')[1]):
-                                peptide_hash[key][24] = line[24]
+                            try:
+                                if float(line[24].split('XQ:f:')[1]) > float(peptide_hash[key][24].split('XQ:f:')[1]):
+                                    peptide_hash[key][24] = line[24]
+                            except:
+                                pass
 
         sam_file.close()
         sam_file = open(directory + name + '.sam', 'w')
