@@ -308,8 +308,6 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                 else:
                                     # map peptide on protein and retrieve hit position, iterate over all hits
                                     for phit in protein_hit:
-                                        cigar=compute_cigar(temp_result[3],pos_and_exons[1],
-                                                            transcript_hash[transcript_id]['strand'],row['peptide'])
                                         start_time = time.time()
                                         is_hit=1
                                         temp_result=[None]*33
@@ -337,6 +335,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                         #MAPQ
                                         temp_result[4]=255
                                         #CIGAR
+                                        cigar = compute_cigar(temp_result[3], pos_and_exons[1],
+                                                              transcript_hash[transcript_id]['strand'], row['peptide'])
                                         temp_result[5]=cigar[0]
                                         #RNEXT
                                         temp_result[6]='*'
