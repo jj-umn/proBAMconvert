@@ -446,5 +446,5 @@ def nh_key_line(line):
     :return: key (string)
     '''
     line=line.split("\t")
-    key=line[19]+"_"+line[0]
+    key=line[11]+"_"+line[0]
     return key

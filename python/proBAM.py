@@ -735,13 +735,13 @@ def compute_NH_XL(directory,name,include_unmapped,mode):
                 else:
                     line=line.split("\t")
                     if mode=='proBAM_peptide':
-                        key=line[19]+'_'+line[2]+'_'+line[3]+'_'+line[5]
-                        id=line[19].split(':')[2]
+                        key=line[23]+'_'+line[2]+'_'+line[3]+'_'+line[5]
+                        id=line[23].split(':')[2]
                     elif mode=='proBAM_peptide_mod':
-                        if line[26]=="XM:Z:*":
-                            id=line[19].split(':')[2]
+                        if line[20]=="XM:Z:*":
+                            id=line[23].split(':')[2]
                         else:
-                            id=line[19].split(':')[2]+","+line[26].split('XM:Z:')[1].replace(";",",")
+                            id=line[23].split(':')[2]+","+line[20].split('XM:Z:')[1].replace(";",",")
                         key=id+'_'+line[2]+'_'+line[3]+'_'+line[5]
 
                     if id in nh_hash:
@@ -757,18 +757,18 @@ def compute_NH_XL(directory,name,include_unmapped,mode):
                                                                             line[5]]))]
                     if key not in peptide_hash:
                         peptide_hash[key]=[id,line[1],line[2],line[3],line[4],line[5],line[6],line[7],line[8],line[9],
-                                           line[10],line[11],line[12],'XL:i:*',line[14],line[15],line[16],'XI:f:*',
-                                           'XB:f:*',line[19],line[20],line[21],line[22],line[23],'XC:i:*',line[25],
-                                           'XM:Z:*',line[27],line[28],line[29],line[30],line[31],line[32]]
+                                           line[10],line[11],line[12],'XB:f:*','XC:i:*',line[15],line[16],line[17],
+                                           'XI:f:*','XL:i:*','XM:Z:*',line[21],line[22],line[23],line[24],line[25],
+                                           line[26],line[27],line[28],line[29],line[30],line[31],line[32]]
                     if id not in score_hash:
                         score_hash[id]=1
                     else:
-                        if line[22]!='XS:f:*':
-                            if float(line[22].split('XS:f:')[1])>float(peptide_hash[key][22].split('XS:f:')[1]):
-                                peptide_hash[key][22]=line[22]
-                        if line[23] != 'XQ:f:*':
-                            if float(line[23].split('XQ:f:')[1]) > float(peptide_hash[key][23].split('XQ:f:')[1]):
-                                peptide_hash[key][23] = line[23]
+                        if line[26]!='XS:f:*':
+                            if float(line[26].split('XS:f:')[1])>float(peptide_hash[key][26].split('XS:f:')[1]):
+                                peptide_hash[key][26]=line[26]
+                        if line[24] != 'XQ:f:*':
+                            if float(line[24].split('XQ:f:')[1]) > float(peptide_hash[key][24].split('XQ:f:')[1]):
+                                peptide_hash[key][24] = line[24]
 
         sam_file.close()
         sam_file = open(directory + name + '.sam', 'w')
@@ -802,11 +802,11 @@ def compute_NH_XL(directory,name,include_unmapped,mode):
                     continue
                 else:
                     if line.split("\t")[0] in xl_hash:
-                        if line.split("\t")[19] not in xl_hash[line.split("\t")[0]]:
-                            xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+                        if line.split("\t")[23] not in xl_hash[line.split("\t")[0]]:
+                            xl_hash[line.split("\t")[0]].append(line.split("\t")[23])
                     else:
                         xl_hash[line.split("\t")[0]]=[]
-                        xl_hash[line.split("\t")[0]].append(line.split("\t")[19])
+                        xl_hash[line.split("\t")[0]].append(line.split("\t")[23])
                     if nh_key_line(line) in nh_hash:
                         if create_id_from_list([line.split('\t')[2],line.split('\t')[3],line.split('\t')[5]]) in \
                                 nh_hash[nh_key_line(line)]:
@@ -847,6 +847,7 @@ if __name__=='__main__':
         start_time = time.time()
         # start timing function
         get_input_variables()
+        directory=directory+'/'
 
         # hash PSM_DATA and define variables
         psm_hash=proBAM_input.get_PSM_hash(psm_file,decoy_annotation)
