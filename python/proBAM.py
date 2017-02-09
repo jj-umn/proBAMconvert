@@ -62,8 +62,7 @@ def get_parser():
     parser.add_argument('--mismatches', '-M', help='numpber of mismatches allowed during mapping',
                         required=False,default=0,choices=[0,1,2,3,4,5],dest='allowed_mismatches')
     parser.add_argument('--version', '-V', help='ENSEMBL version to be used',
-                        required=False,default=87,choices=[54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73
-                                                           ,74,75,76,77,78,79,80,81,82,83,84,85,86,87],
+                        required=False,default=87,choices=[74,75,76,77,78,79,80,81,82,83,84,85,86,87],
                         dest='database_v')
     parser.add_argument('--database', '-D', help='Which database has to be used (currently only ENSEMBL is available',
                         default="ENSEMBL",choices=['ENSEMBL'])
@@ -294,7 +293,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                     temp_hit=map_peptide_to_protein_3frame(row['peptide'],
                                                                               transcript_hash[transcript_id]['transcript_seq'],
                                                                               allowed_mismatches,
-                                                                              transcript_hash[transcript_id]['strand'])[1]
+                                                                              transcript_hash[transcript_id]['strand'])
                                     protein_hit=temp_hit[0]
                                     pre_post_aa=temp_hit[1]
                                 else:
@@ -302,7 +301,6 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                                        ,allowed_mismatches)
                                     protein_hit=temp_hit[0]
                                     pre_post_aa=temp_hit[1]
-
                                 if len(protein_hit)==0:
                                     continue
                                 else:

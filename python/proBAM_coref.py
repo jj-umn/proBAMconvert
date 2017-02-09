@@ -146,7 +146,8 @@ def calculate_genome_position(phit,strand,offset,start_exon_rank,peptide,exons,c
     :param chr: transcript chr
     :return: genomic start position
     '''
-    temp_offset=offset-shift
+    if three_frame_translation!='Y':
+        temp_offset=offset-shift
     temp_exons=exons
     #get start exon rank:
     for exon in temp_exons:
@@ -253,7 +254,6 @@ def map_peptide_to_protein_3frame(peptide_seq,transcript_seq,allowed_mismatches,
                     pre_post_aa[1] = f[(pep_length + i):(pep_length + i + 2)]
                 else:
                     pre_post_aa[1] = "*"
-
     return [hits,pre_post_aa]
 #
 # Function that maps peptide on the corresponding protein, alowing mismatches ( as specified)

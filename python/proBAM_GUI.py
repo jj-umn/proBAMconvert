@@ -125,8 +125,7 @@ def _getDatabaseVersion_(tk):
     database_v.set('87')
 
     menu=OptionMenu(tk,database_v,'87','86','85','84','83','82','81','80','79','78','77','76',
-                                    '75','74','73','72','71','70','69','68','67','66','65',
-                                    '64','63','62','61','60','59','58','57','56','55','54')
+                                    '75','74')
     menu.config(width=15,background="#f2f2f2")
     menu.grid(row=5,column=1)
 
@@ -489,7 +488,6 @@ def GUI():
     default_font = tkFont.nametofont("TkDefaultFont")
     default_font.configure(size=9,weight=tkFont.BOLD,family="MS Free Sans")
     std_frame=Frame().grid(row=13,columnspan=2)
-
     # get scrolled text
     Label(text='', pady=5, width=70, background="#f2f2f2").grid(row=12, columnspan=2)
     global std_label
