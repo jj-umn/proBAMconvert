@@ -691,6 +691,8 @@ def sam_2_bam(directory,name):
     outfile = pysam.AlignmentFile((directory+name+'.bam'), "wb", template=infile)
     for s in infile:
         outfile.write(s)
+    infile.close()
+    outfile.close()
     # create EOF
     bam=open((directory+name+'.bam'),'ab')
     bam.write("\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BC" + \

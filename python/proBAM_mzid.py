@@ -46,17 +46,18 @@ def get_PSM_mzid(psm_file):
                 row['spectrumID']='ms_run['+str(spectraData_ref[row['spectraData_ref']])+']:'+row['spectrumID']
             temp_hash={"assumed_charge":row['SpectrumIdentificationItem'][0]['chargeState'],"spectrum":row['spectrumID'],"search_hit":[]}
             for psm in row["SpectrumIdentificationItem"]:
-                proteins=[]
-                massdiff=_cal_massdiff_(psm['experimentalMassToCharge'],psm['calculatedMassToCharge'])
-                for protein in psm["PeptideEvidenceRef"]:
-                    proteins.append({"protein":accession_hash[protein['peptideEvidence_ref']]})
-                temp_hash['search_hit'].append({"hit_rank":psm['rank'],"modifications":mod_hash[psm['peptide_ref']],
-                                                "calc_neutral_pep_mass": psm['experimentalMassToCharge'],
-                                                "precursor_neutral_mass": psm['calculatedMassToCharge'],
-                                                "peptide":sequence_hash[psm['peptide_ref']],
-                                                "search_score":{"score":_get_score_(psm),"evalue":_get_evalue_(psm)},
-                                                "proteins":proteins,"num_missed_cleavages":"0",
-                                                "massdiff":massdiff})
+                if psm['passThreshold']==True:
+                    proteins=[]
+                    massdiff=_cal_massdiff_(psm['experimentalMassToCharge'],psm['calculatedMassToCharge'])
+                    for protein in psm["PeptideEvidenceRef"]:
+                        proteins.append({"protein":accession_hash[protein['peptideEvidence_ref']]})
+                    temp_hash['search_hit'].append({"hit_rank":psm['rank'],"modifications":mod_hash[psm['peptide_ref']],
+                                                    "calc_neutral_pep_mass": psm['experimentalMassToCharge'],
+                                                    "precursor_neutral_mass": psm['calculatedMassToCharge'],
+                                                    "peptide":sequence_hash[psm['peptide_ref']],
+                                                    "search_score":{"score":_get_score_(psm),"evalue":_get_evalue_(psm)},
+                                                    "proteins":proteins,"num_missed_cleavages":"0",
+                                                    "massdiff":massdiff})
             psm_hash.append(temp_hash)
     del mod_hash
     del sequence_hash
