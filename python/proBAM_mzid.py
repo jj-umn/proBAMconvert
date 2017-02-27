@@ -59,6 +59,7 @@ def get_PSM_mzid(psm_file):
                                                     "proteins":proteins,"num_missed_cleavages":"0",
                                                     "massdiff":massdiff})
             psm_hash.append(temp_hash)
+    PSM.close()
     del mod_hash
     del sequence_hash
     del accession_hash

@@ -246,6 +246,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
     total_psms=len(psm_hash)
     current_psm=1
     percentage=5
+    to_write=[]
+    print 'total psm_2B_processed:',len(psm_hash)
     for psm in psm_hash:
         # track progress
         current_psm+=1
@@ -272,9 +274,9 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                      +"_"+str(temp_result[3])
                             if dup_key not in dup:
                                 dup[dup_key]=1
-                                write_psm(temp_result,file)
+                                to_write.append(temp_result)
                         else:
-                            write_psm(temp_result,file)
+                            to_write.append(temp_result)
 
                     if decoy==0:
                         key=row['proteins'][p]['protein']
@@ -413,14 +415,15 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                                               str(str(temp_result[0])+"_"+temp_result[2])+"_"+str(temp_result[3])
                                             if dup_key not in dup:
                                                 dup[dup_key]=1
-                                                write_psm(temp_result,file)
+                                                to_write.append(temp_result)
                                         else:
-                                            write_psm(temp_result,file)
+                                            to_write.append(temp_result)
                             if is_hit==0:
-                                write_psm(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity),
-                                          file)
-
+                                to_write.append(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity))
     print " "
+    print "Writing SAM-file"
+    for line in to_write:
+        write_psm(line,file)
     file.close()
 
 #
