@@ -349,7 +349,7 @@ def get_genome_version(database_v,species):
 
     cur.execute("SELECT version from coord_system where rank=1")
 
-    for row in cur.execute():
+    for row in cur.fetchall():
         result=row[0]
 
     version=str(species+"."+result)
