@@ -28,7 +28,6 @@ import proBAM_ENSEMBL
 import sys
 import os
 import proBAM_proBED
-import proBAM_GUI
 import proBAM_IDparser
 import argparse
 from proBAM_coref import *
@@ -238,7 +237,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
     :param file: sam file
     :return: sam file IO
     '''
-    print "Commencing generation of SAM file"
+    print("Commencing generation of SAM file")
     # psm_hash.reset()
     if rm_duplicates == "Y":
         dup = {}
@@ -248,22 +247,22 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
     current_psm=1
     percentage=5
     to_write=[]
-    print 'total psm_2B_processed:',len(psm_hash)
+    print('total psm_2B_processed:', len(psm_hash))
     for psm in psm_hash:
         # track progress
         current_psm+=1
-        if (float(current_psm*100)/float(total_psms))>percentage:
-            print str(percentage)+"%",
-            percentage+=5
+        if float(current_psm*100)/float(total_psms) > percentage:
+            print("%s%" % percentage)
+            percentage += 5
         # update window if in GUI
-        if gui!=None:
+        if gui != None:
             gui.update()
         # convert unmapped PSMs with their own converter
         if 'search_hit' not in psm:
             continue
         else:
             for row in psm['search_hit']:
-                for p in range(0,len(row['proteins'])):
+                for p in range(0, len(row['proteins'])):
                     decoy=0
                     # convert decoys with decoy-specific convertor
                     if 'DECOY_' in row['proteins'][p]['protein'].upper():
@@ -279,7 +278,7 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                         else:
                             to_write.append(temp_result)
 
-                    if decoy==0:
+                    if decoy == 0:
                         key=row['proteins'][p]['protein']
                         # Filter out PSM where transcript sequences were not found/ non-existent
                         if (key not in id_map):
@@ -421,8 +420,8 @@ def PSM2SAM(psm_hash,transcript_hash,exon_hash,decoy_annotation,allowed_mismatch
                                             to_write.append(temp_result)
                             if is_hit==0:
                                 to_write.append(unannotated_PSM_to_SAM(psm, row, decoy, key, enzyme, enzyme_specificity))
-    print " "
-    print "Writing SAM-file"
+    print(" ")
+    print("Writing SAM-file")
     for line in to_write:
         write_psm(line,file)
     file.close()
@@ -657,7 +656,7 @@ def create_SAM_header(file,version,database,sorting_order,database_v,species,com
     :param database_v: database version
     :return:
     '''
-    print 'Creating SAM header'
+    print('Creating SAM header')
     header=[]
     header.append('@HD\tVN:'+str(version)+' SO:'+sorting_order)
     if database.upper()=="ENSEMBL":
@@ -690,7 +689,7 @@ def sam_2_bam(directory,name):
     :param directory:
     :param name: file name
     '''
-    print "Converting SAM to BAM"
+    print("Converting SAM to BAM")
     infile = pysam.AlignmentFile((directory+name+'.sam'), "r")
     outfile = pysam.AlignmentFile((directory+name+'.bam'), "wb", template=infile)
     for s in infile:
@@ -721,8 +720,8 @@ def compute_NH_XL(directory,name,include_unmapped,mode):
     :param include_unmapped: 'Y' or 'N', whether to include unmapped PSMs
     :param mode: proBAM mode (psm,peptide,peptide-mod...)
     '''
-    if mode=='proBAM_peptide' or mode=='proBAM_peptide_mod':
-        print "Create peptide-based proBAM"
+    if mode in ['proBAM_peptide', 'proBAM_peptide_mod']:
+        print("Create peptide-based proBAM")
         sam_file = open(directory + name + '.sam', 'r')
         original_file = sam_file.read()
         nh_hash = {}
@@ -848,7 +847,7 @@ def compute_NH_XL(directory,name,include_unmapped,mode):
 ### MAIN PROGRAM ###
 ####################
 
-if __name__=='__main__':
+if __name__ == '__main__':
     if len(sys.argv) > 1:
         parser = get_parser()  # start command line argument parser
         args = parser.parse_args()  # parse command line arguments
@@ -887,10 +886,10 @@ if __name__=='__main__':
                                   rm_duplicates,three_frame_translation,id_map,None,database_v,species)
 
 
-
         print("proBAM conversion succesful")
         print("%f seconds" % (time.time() - start_time))         # output script run time
     else:
         # start GUI
+        import proBAM_GUI
         proBAM_GUI._get_global_arguments_()
         proBAM_GUI.GUI()
