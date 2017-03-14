@@ -199,7 +199,7 @@ def chunkIt(seq, num):
     :param num: number of chunks to be distributed
     :return: an array with in each compartment an equal amount of values
     '''
-    avg = len(seq) / float(num)
+    avg = max(len(seq) / float(num),float(num))
     out = []
     last = 0.0
 
