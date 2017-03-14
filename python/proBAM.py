@@ -60,9 +60,9 @@ def get_parser():
     parser.add_argument('--name','-N',help='name of the project (will be determine how the output file is called',
                         required=True)
     parser.add_argument('--mismatches', '-M', help='numpber of mismatches allowed during mapping',
-                        required=False,default=0,choices=[0,1,2,3,4,5],dest='allowed_mismatches')
+                        required=False,default=0,choices=['0','1','2','3','4','5'],dest='allowed_mismatches')
     parser.add_argument('--version', '-V', help='ENSEMBL version to be used',
-                        required=False,default=87,choices=[74,75,76,77,78,79,80,81,82,83,84,85,86,87],
+                        required=False,default=87,choices=['74','75','76','77','78','79','80','81','82','83','84','85','86','87'],
                         dest='database_v')
     parser.add_argument('--database', '-D', help='Which database has to be used (currently only ENSEMBL is available',
                         default="ENSEMBL",choices=['ENSEMBL'])
@@ -855,6 +855,8 @@ if __name__=='__main__':
         start_time = time.time()
         # start timing function
         get_input_variables()
+        database_v=int(database_v)
+        allowed_mismatches=int(allowed_mismatches)
         directory=directory+'/'
 
         # hash PSM_DATA and define variables
